@@ -59,3 +59,15 @@ The reformatted specs made the generated prompt much more professional and easie
 - Input: prompts/3-web-api-plan.md
 - Output: config-service/
 - Reflections (narrative assessments of the response):
+
+I didn't need to run a command. By switching to Act, Cline created the files and folders as specified in the plan.
+
+I had a few issues which the free grok model couldn't debug which was frustrating so I switched to Augment to fix these to get the web api tests passing and the server running.
+
+I then updated the code including the unit testing framework to follow suggested best practices. I then added some further features to the web api including:
+- API versioning
+- Health check
+- OpenAPI documentation
+- Linting
+
+I then asked Cline to create a new set of updated prompt files in the prompts folder based on this updated code to see where I could have specified these better.

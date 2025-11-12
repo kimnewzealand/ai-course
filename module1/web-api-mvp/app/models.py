@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String
 from app.database import Base
 
 class Item(Base):
@@ -7,6 +7,5 @@ class Item(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     description = Column(String)
-    price = Column(Float, nullable=False)
     created_at = Column(String)
     updated_at = Column(String)

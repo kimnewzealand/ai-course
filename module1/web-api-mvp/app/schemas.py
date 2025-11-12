@@ -1,10 +1,17 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 class ItemBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    price: float
+    name: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Item name (1-100 characters)"
+    )
+    description: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Item description (optional, max 500 characters)"
+    )
 
 class ItemCreate(ItemBase):
     pass
@@ -12,9 +19,11 @@ class ItemCreate(ItemBase):
 class ItemUpdate(ItemBase):
     pass
 
-class Item(ItemBase):
-    id: int
-    created_at: str
-    updated_at: Optional[str] = None
+class Item(BaseModel):
+    id: int = Field(description="Unique item identifier")
+    name: str = Field(description="Item name")
+    description: Optional[str] = Field(None, description="Item description")
+    created_at: str = Field(description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
 
     model_config = ConfigDict(from_attributes=True)
