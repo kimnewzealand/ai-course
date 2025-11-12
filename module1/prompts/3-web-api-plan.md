@@ -1,33 +1,28 @@
-Here's a comprehensive implementation plan for the REST Web API service based on the provided specifications:
+Here's the minimal MVP implementation plan for the REST Web API service:
 
 ## 1. Project Structure
 
 ```
-web-api-service/
+web-api-mvp/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              # FastAPI app instance and startup
-│   ├── config.py            # Configuration management
-│   ├── database.py          # Database connection and session management
-│   ├── models.py            # SQLAlchemy models
-│   ├── schemas.py           # Pydantic schemas for validation
-│   ├── crud.py              # CRUD operations
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   └── items.py         # Item-related API routes
-│   └── dependencies.py      # Dependency injection functions
+│   ├── main.py          # FastAPI app and routes
+│   ├── database.py      # Database setup
+│   ├── models.py        # SQLAlchemy models
+│   ├── schemas.py       # Pydantic schemas
+│   └── crud.py          # CRUD operations
 ├── tests/
 │   ├── __init__.py
-│   ├── conftest.py          # Pytest fixtures
-│   ├── test_items.py        # API endpoint tests
-│   └── test_crud.py         # CRUD operation tests
-├── .env                     # Environment variables
-├── requirements.txt         # Python dependencies
-├── README.md                # Documentation
-└── .gitignore
+│   └── test_api.py      # API tests
+├── .env                 # Environment variables
+├── .gitignore           # Git ignore rules
+├── README.md            # Setup and run instructions
+└── requirements.txt     # Dependencies
 ```
 
 ## 2. Dependencies
+
+Create `requirements.txt` with:
 
 ```
 fastapi==0.104.1
@@ -43,7 +38,7 @@ pytest-asyncio==0.21.1
 
 ## 3. Database Schemas
 
-__Item Model (SQLAlchemy):__
+__Item Model__ (`app/models.py`):
 
 ```python
 from sqlalchemy import Column, Integer, String, Float, DateTime
@@ -53,7 +48,7 @@ from app.database import Base
 class Item(Base):
     __tablename__ = "items"
     
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     description = Column(String)
     price = Column(Float, nullable=False)
@@ -61,42 +56,78 @@ class Item(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 ```
 
-__Database Initialization:__
+__Database Setup__ (`app/database.py`):
 
-- Create tables on startup using SQLAlchemy's create_all()
-- SQLite database file stored locally (e.g., database.db)
+```python
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+DATABASE_URL = "sqlite+aiosqlite:///./database.db"
+
+engine = create_async_engine(DATABASE_URL)
+async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+class Base(DeclarativeBase):
+    pass
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+```
 
 ## 4. API Route Implementations
 
-__GET /items:__
+__Main App__ (`app/main.py`):
 
-- Query parameters: limit (int, default 10), offset (int, default 0)
-- Returns: List of items with pagination metadata
+```python
+from fastapi import FastAPI, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app import crud, models, schemas
+from app.database import async_session, init_db
 
-__POST /items:__
+app = FastAPI()
 
-- Request body: ItemCreate schema
-- Returns: Created item with 201 status
+@app.on_event("startup")
+async def startup():
+    await init_db()
 
-__GET /items/{id}:__
+@app.get("/items", response_model=list[schemas.Item])
+async def read_items(limit: int = 10, offset: int = 0, db: AsyncSession = Depends(get_db)):
+    return await crud.get_items(db, limit=limit, offset=offset)
 
-- Path parameter: id (int)
-- Returns: Single item or 404 if not found
+@app.post("/items", response_model=schemas.Item)
+async def create_item(item: schemas.ItemCreate, db: AsyncSession = Depends(get_db)):
+    return await crud.create_item(db, item)
 
-__PUT /items/{id}:__
+@app.get("/items/{item_id}", response_model=schemas.Item)
+async def read_item(item_id: int, db: AsyncSession = Depends(get_db)):
+    item = await crud.get_item(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
 
-- Path parameter: id (int)
-- Request body: ItemUpdate schema
-- Returns: Updated item or 404/400 for errors
+@app.put("/items/{item_id}", response_model=schemas.Item)
+async def update_item(item_id: int, item: schemas.ItemUpdate, db: AsyncSession = Depends(get_db)):
+    updated_item = await crud.update_item(db, item_id, item)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return updated_item
 
-__DELETE /items/{id}:__
+@app.delete("/items/{item_id}")
+async def delete_item(item_id: int, db: AsyncSession = Depends(get_db)):
+    deleted = await crud.delete_item(db, item_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted"}
 
-- Path parameter: id (int)
-- Returns: 204 on success, 404 if not found
+async def get_db():
+    async with async_session() as session:
+        yield session
+```
 
 ## 5. Data Models and Validation
 
-__Pydantic Schemas:__
+__Pydantic Schemas__ (`app/schemas.py`):
 
 ```python
 from pydantic import BaseModel
@@ -124,32 +155,99 @@ class Item(ItemBase):
 
 ## 6. Error Handling
 
-- Use FastAPI's HTTPException for standard HTTP errors
-- Custom exception handlers for database errors
-- Validation errors handled automatically by Pydantic
-- Consistent error response format:
-
-```json
-{
-  "detail": "Error message",
-  "type": "error_type"
-}
-```
+- Use FastAPI's built-in validation errors for request data
+- HTTPException for 404s and other standard errors
+- Return JSON error responses with appropriate status codes
 
 ## 7. Configuration Management
 
-- Environment variables for database URL, app settings
-- Pydantic settings class for validation
-- Separate configs for development/production
-- Database URL: sqlite+aiosqlite:///./database.db
+__`.env` template__:
+
+```
+# Database
+DATABASE_URL=sqlite+aiosqlite:///./database.db
+
+# App
+DEBUG=True
+```
+
+__Load config__ (add to `app/main.py` or separate config file):
+
+```python
+from dotenv import load_dotenv
+load_dotenv()
+```
 
 ## 8. Testing Strategy
 
-- Unit tests for CRUD operations
-- Integration tests for API endpoints
-- Use pytest-asyncio for async tests
-- httpx for HTTP client testing
-- Test database isolation with fixtures (in-memory SQLite for tests)
-- Coverage reporting with pytest-cov
+__Test File__ (`tests/test_api.py`):
 
-This plan provides a solid foundation for the REST API service using SQLite for local development and testing, while maintaining all specified requirements and best practices
+```python
+import pytest
+from httpx import AsyncClient
+from app.main import app
+from app.database import init_db
+
+@pytest.fixture
+async def client():
+    await init_db()
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+
+@pytest.mark.asyncio
+async def test_create_item(client):
+    response = await client.post("/items", json={"name": "Test Item", "price": 10.0})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Test Item"
+
+@pytest.mark.asyncio
+async def test_get_items(client):
+    response = await client.get("/items")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+@pytest.mark.asyncio
+async def test_get_item_not_found(client):
+    response = await client.get("/items/999")
+    assert response.status_code == 404
+```
+
+Run tests with: `pytest`
+
+## Additional Files
+
+__README.md__:
+
+```markdown
+# Web API MVP
+
+## Setup
+1. Install uv: `pip install uv`
+2. Create virtual environment: `uv venv`
+3. Activate: `source .venv/bin/activate` (Linux/Mac) or `.venv\Scripts\activate` (Windows)
+4. Install dependencies: `uv pip install -r requirements.txt`
+
+## Run
+uvicorn app.main:app --reload
+
+## Test
+pytest
+
+## API Docs
+http://localhost:8000/docs
+```
+
+__`.gitignore`__:
+
+```
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+.env
+database.db
+.venv/
+```
+
+This minimal plan provides a working MVP with all required functionality using the specified dependencies and structure.

@@ -1,29 +1,77 @@
-I need help creating a comprehensive implementation plan for a REST Web API service. Please review the following specifications and create a detailed plan that includes dependencies, file/folder structure, and architectural patterns. You must strictly adhere to ALL of the details provided below and not add any additional dependencies or features without explicit approval. If anything is unclear or you need more information, please ask for clarification.
+I need help creating a minimal implementation plan for an MVP REST Web API service. Please review the following specifications and create a detailed plan that includes dependencies, file/folder structure, and architectural patterns. You must strictly adhere to ALL of the details provided below and not add any additional dependencies or features without explicit approval. If anything is unclear or you need more information, please ask for clarification.
 
-__Specifications:__
+## Technical Specifications
 
-- Programming language choice: Python
+### Programming Language
 
-- Web framework and supporting dependencies: Use FastAPI (an open source web framework) along with Uvicorn (open source Asynchronous Server Gateway Interface -ASGI server) and Pydantic (open source data validation library).
+- __Choice__: Python
 
-- API endpoints and payloads details:
+### Dependencies
 
-  - GET /items - Retrieve a list of items (query parameters for pagination: limit, offset)
-  - POST /items - Create a new item (payload: {"name": "string", "description": "string", "price": float})
-  - GET /items/{id} - Retrieve a specific item by ID
-  - PUT /items/{id} - Update an existing item (payload: same as POST)
-  - DELETE /items/{id} - Delete an item by ID All endpoints should return appropriate HTTP status codes and error responses in JSON format, following REST API best practices.
+Python libraries and specific versions:
 
-- Database engine & driver library: Use SQLite as the database engine and aiosqlite as the driver library.
+```python
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+sqlalchemy[asyncio]==2.0.23
+aiosqlite==0.19.0
+python-dotenv==1.0.0
+pytest==7.4.3
+httpx==0.25.2
+pytest-asyncio==0.21.1
+```
 
-- Storage & query-related preferences: Use SQLAlchemy (an open source ORM) with async support for database operations. Implement database models for the items with appropriate fields (id, name, description, price, created_at, updated_at).
+### API Design
 
-- Deployment preferences: Do not provide any specific instructions for deployment. This web api will be locally tested for now.
+__Endpoints and Payloads__:
 
-Please provide a complete implementation plan that covers:
+- __GET /items__ - Retrieve a list of items (query parameters for pagination: `limit`, `offset`)
+
+- __POST /items__ - Create a new item (payload:
+
+  ```json
+  {
+    "name": "string",
+    "description": "string",
+    "price": 0.0
+  }
+  ```
+
+  )
+
+- __GET /items/{id}__ - Retrieve a specific item by ID
+
+- __PUT /items/{id}__ - Update an existing item (payload: same as POST)
+
+- __DELETE /items/{id}__ - Delete an item by ID
+
+*All endpoints should return appropriate HTTP status codes and error responses in JSON format, following REST API best practices.*
+
+### Database & Storage
+
+- __Migration__: This is a new project. *No migration is needed.*
+
+### Testing
+
+- __Strategy__: Add minimal pytest unit tests for the API endpoints
+
+### Project Files
+
+Create and populate the following files:
+
+- `README.md` file with instructions on how to run and test the API locally. *Use uv for virtual environment management*
+- `.env` file template
+- `.gitignore` file
+
+### Deployment
+
+- __Preferences__: Do not provide any specific instructions for deployment. *This web API will be locally run and tested for now.*
+
+Please provide a complete minimal MVP implementation plan that covers:
 
 1. Project structure (folders and files)
-2. Dependencies (exact versions where possible, focusing on open source libraries)
+2. Dependencies (use the exact versions specified)
 3. Database schemas
 4. API route implementations
 5. Data models and validation
@@ -31,4 +79,4 @@ Please provide a complete implementation plan that covers:
 7. Configuration management
 8. Testing strategy
 
-Ensure the plan follows Python best practices, REST API conventions, and prioritizes open source solutions throughout.
+Ensure the plan follows Python best practices and REST API conventions.
