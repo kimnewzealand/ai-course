@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app import crud, schemas
 from app.database import SessionLocal, init_db
@@ -20,6 +21,15 @@ app = FastAPI(
     description="A REST API for managing items",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 def get_db():

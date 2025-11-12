@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Interface</title>
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+  <header>
+    <h1>Item Management Admin</h1>
+    <nav>
+      <button id="list-btn">List Items</button>
+      <button id="create-btn">Create Item</button>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <div id="item-list" class="content-section">
+      <h2>Items</h2>
+      <div id="items-container"></div>
+    </div>
+
+    <div id="item-form" class="content-section hidden">
+      <h2>Create/Edit Item</h2>
+      <form id="item-form-element">
+        <div class="form-group">
+          <label for="name">Name:</label>
+          <input type="text" id="name" name="name">
+          <div class="error" id="name-error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description:</label>
+          <textarea id="description" name="description"></textarea>
+          <div class="error" id="description-error"></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="submit-btn">Create Item</button>
+          <button type="button" id="cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div id="notifications" class="notifications"></div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -81,6 +81,7 @@ I then asked Cline to create a new set of updated prompt files in the prompts fo
 - Input: prompts/4-admin-ui-specs.md
 - Output: prompts/5-admin-ui-prompt.md
 - Reflections (narrative assessments of the response): 
+
 The prompt didn't include enough detail such as specific library numbers or folder structure so I updated the prompt and then asked it to regenerate the prompt.
 
 
@@ -92,3 +93,11 @@ The prompt didn't include enough detail such as specific library numbers or fold
 - Input: prompts/5-admin-ui-prompt.md
 - Output: prompts/6-admin-ui-plan.md
 - Reflections (narrative assessments of the response): 
+
+After Cline Act generated the code, I also spent time getting the UI tests running and passing in the second phase of implementation. Using an assistant is definitely a huge time saving on manually writing tests and debugging. On rerunning the updated prompts I could see some types of detail that is useful for the assistants eg performance considerations and cross browser compatibility that I initial forgot about.
+
+I didn't clean the Cline chat history so it was able to refer to previous conversations. This didn't seem to slow it down or cause issues with generating code. I found that there was potentially more an issue with the free model and it's ability to debug issues. I did switch to Augment which is using CLaude Sonnet 4.5 to fix these issues and move forward. Maybe there is value in having two code assistants available ?
+
+I also didn't add any Cline rules but I think I have now removed the approval to execute commands after seeing Cline run quite freely on my machine.
+
+I ended at 207.9k tokens from 256k Cline token limit.
