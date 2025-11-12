@@ -71,3 +71,24 @@ I then updated the code including the unit testing framework to follow suggested
 - Linting
 
 I then asked Cline to create a new set of updated prompt files in the prompts folder based on this updated code to see where I could have specified these better.
+
+
+- Prompt: Read @/prompts/4-admin-ui-specs.md and follow the instructions at the top of the file.
+- Tool: Cline
+- Mode: Plan
+- Context: Continue from previous
+- Model (LLM model and version): grok-code-fast-1
+- Input: prompts/4-admin-ui-specs.md
+- Output: prompts/5-admin-ui-prompt.md
+- Reflections (narrative assessments of the response): 
+The prompt didn't include enough detail such as specific library numbers or folder structure so I updated the prompt and then asked it to regenerate the prompt.
+
+
+- Prompt: Read @/prompts/5-admin-ui-prompt.md and follow the instructions at the top of the file.
+- Tool: Cline
+- Mode: Plan
+- Context: Continue from previous
+- Model (LLM model and version): grok-code-fast-1
+- Input: prompts/5-admin-ui-prompt.md
+- Output: prompts/6-admin-ui-plan.md
+- Reflections (narrative assessments of the response): 
