@@ -101,3 +101,5 @@ I didn't clean the Cline chat history so it was able to refer to previous conver
 I also didn't add any Cline rules but I think I have now removed the approval to execute commands after seeing Cline run quite freely on my machine.
 
 I ended at 207.9k tokens from 256k Cline token limit.
+
+See [prompts](https://github.com/kimnewzealand/ai-course/tree/main/module1/prompts) and [generated code](https://github.com/kimnewzealand/ai-course/tree/main/module1/web-api-mvp) for simple web app and api created in this module's practice.
