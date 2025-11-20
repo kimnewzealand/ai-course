@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: 'html',
-  globalSetup: './tests/global-setup.ts',
+
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -26,9 +26,5 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-  },
+  // webServer temporarily disabled - start manually: pnpm dev
 });

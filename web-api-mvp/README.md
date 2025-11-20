@@ -1,66 +1,138 @@
 # Web API MVP
 
-A REST API for managing items with FastAPI, featuring input validation, API versioning, health checks, and comprehensive testing.
+A complete configuration management system with REST API backend, TypeScript client library, and web admin interface.
+
+## Project Components
+
+- **Backend API** (`/app`): FastAPI server with SQLite database
+- **Client Library** (`/client`): TypeScript library for easy API integration
+- **Admin UI** (`/ui`): Web interface for managing configurations
 
 ## Features
 
-- ✅ **CRUD Operations**: Create, Read, Update, Delete items
-- ✅ **Input Validation**: Pydantic models with field constraints
-- ✅ **API Versioning**: `/v1/` prefixed endpoints with backward compatibility
-- ✅ **Health Checks**: `/health` endpoint for monitoring
-- ✅ **OpenAPI Documentation**: Auto-generated docs with tags
-- ✅ **Automated Unit Testing**: Unit tests with database isolation
-- ✅ **Linting**: Ruff configuration for code quality
+- ✅ **REST API**: CRUD operations with validation and versioning
+- ✅ **TypeScript Client**: Simple wrapper for API consumption
+- ✅ **Web Interface**: Modern admin UI for configuration management
+- ✅ **Comprehensive Testing**: Unit, integration, and E2E tests
+- ✅ **Developer Experience**: Linting, type safety, documentation
 
-## Setup
+## Prerequisites
 
-Change to `web-api-mvp` folder
+- **Python 3.8+** with `pip`
+- **Node.js 18+** with `npm` (for client library and UI)
+- **npm** (for UI): `npm install -g npm`
 
-1. Install uv: `pip install uv`
-2. Create virtual environment: `uv venv`
-3. Activate: `source .venv/bin/activate` (Linux/Mac) or `source .venv/Scripts/activate` ( Git Bash) or `.venv\Scripts\activate` (Windows)
-4. Install dependencies: `uv pip install -r requirements.txt`
+## Backend API Setup
 
-## Run
+### Install and Run
 
 ```bash
+cd web-api-mvp
+
+# Install uv package manager
+pip install uv
+
+# Create virtual environment
+uv venv
+
+# Activate environment
+# Git Bash: source .venv/Scripts/activate
+# Linux/Mac: source .venv/bin/activate
+# Windows: .venv\Scripts\activate
+
+# Install dependencies
+uv pip install -r requirements.txt
+
+# Run API server
 uvicorn app.main:app --reload
 ```
 
-## Test
+**API available at**: `http://localhost:8000/docs`
 
-```bash
-pytest
-```
+### API Endpoints
 
-## Lint
-
-```bash
-ruff check .
-ruff format .
-```
-
-## API Endpoints
-
-### Items API (v1)
 - `GET /v1/items` - List items with pagination
 - `POST /v1/items` - Create new item
 - `GET /v1/items/{id}` - Get item by ID
 - `PUT /v1/items/{id}` - Update item
 - `DELETE /v1/items/{id}` - Delete item
+- `GET /health` - Health check
 
-### Health Check
-- `GET /health` - Service health status
+**API Documentation**: `http://localhost:8000/docs`
 
-### Backward Compatibility
-All endpoints also work without `/v1/` prefix for backward compatibility.
+## Client Library
 
-## API Documentation
+The TypeScript client library simplifies API integration for applications.
 
-Visit `http://localhost:8000/docs` for interactive Swagger UI documentation.
+### Development Setup
 
-## Validation Rules
+```bash
+cd client
 
-- **Name**: 1-100 characters, required
-- **Description**: 0-500 characters, optional
-- **Pagination**: `limit` (default 10), `offset` (default 0)
+# Install dependencies
+npm install
+
+# Build library
+npm run build
+
+# Run tests
+npm test
+```
+
+## Admin UI
+
+Modern web interface for managing configurations through the API.
+
+### Setup and Run
+
+```bash
+cd ui
+
+# Install dependencies
+npm install
+
+# Start development server (requires API running)
+npm run dev
+```
+
+**UI available at**: `http://localhost:3000`
+
+### Development Commands
+
+```bash
+npm lint         # Code linting
+npm dev          # Development server
+npm test         # Unit tests
+npm test:e2e     # End-to-end tests
+```
+
+## Development Workflow
+
+1. **Start Backend**: Run API server first
+2. **Develop Client**: Build library, integrate with applications
+3. **Develop UI**: Build admin interface
+4. **Test Integration**: Ensure all components work together
+
+## Project Structure
+
+```
+web-api-mvp/
+├── app/                 # FastAPI backend
+├── client/              # TypeScript client library
+├── ui/                  # Admin web interface
+├── tests/              # Backend integration tests
+├── pyproject.toml      # Python config
+├── requirements.txt    # Python dependencies
+└── README.md          # This file
+```
+
+## Contributing
+
+1. Follow existing code style and conventions
+2. Add tests for new features
+3. Update documentation as needed
+4. Ensure cross-component compatibility
+
+## License
+
+MIT
