@@ -14,9 +14,11 @@ A REST API for managing items with FastAPI, featuring input validation, API vers
 
 ## Setup
 
+Change to `web-api-mvp` folder
+
 1. Install uv: `pip install uv`
 2. Create virtual environment: `uv venv`
-3. Activate: `source .venv/Scripts/activate` (Windows Git Bash) or `source .venv/bin/activate` (Linux/Mac)
+3. Activate: `source .venv/bin/activate` (Linux/Mac) or `source .venv/Scripts/activate` ( Git Bash) or `.venv\Scripts\activate` (Windows)
 4. Install dependencies: `uv pip install -r requirements.txt`
 
 ## Run
