@@ -1,23 +1,26 @@
-from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class ItemBase(BaseModel):
     name: str = Field(
-        min_length=1,
-        max_length=100,
-        description="Item name (1-100 characters)"
+        min_length=1, max_length=100, description="Item name (1-100 characters)"
     )
     description: Optional[str] = Field(
         None,
         max_length=500,
-        description="Item description (optional, max 500 characters)"
+        description="Item description (optional, max 500 characters)",
     )
+
 
 class ItemCreate(ItemBase):
     pass
 
+
 class ItemUpdate(ItemBase):
     pass
+
 
 class Item(BaseModel):
     id: int = Field(description="Unique item identifier")

@@ -1,0 +1,48 @@
+.PHONY: help install install-svc install-ui test test-svc test-ui format lint run-svc run-ui client-build ui-build clean
+
+help: ## Show this help message
+	@echo "Available targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s - %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+install: install-svc install-ui ## Install all dependencies
+
+install-svc: ## Install svc dependencies using uv
+	uv sync --dev --active
+
+install-ui: ## Install UI dependencies using npm
+	cd ui && npm install && cd ..
+
+test: test-svc test-ui ## Run all tests
+
+test-svc: ## Run svc tests with pytest
+	uv run --active python -m pytest tests/
+
+test-ui: client-build ## Run ui tests with vitest
+	cd ui && npm run test && cd ..
+
+format: ## Run ruff formatter
+	uv run --active ruff format .
+
+lint: ## Run ruff linting checks
+	uv run --active ruff check --fix --unsafe-fixes . && uv run --active ruff check .
+
+run-svc: ## Start development server
+	uv run --active uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+run-ui: ## Start UI development server
+	cd ui && npm run dev && cd ..
+
+client-build: ## Build config-client library
+	cd client && npm run build && cd ..
+
+ui-build: client-build ## Build UI for production
+	cd ui && npm run build && cd ..
+
+clean: ## Clean up generated files and containers
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete 2>/dev/null || true
+	find . -name ".coverage" -delete 2>/dev/null || true

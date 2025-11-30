@@ -1,13 +1,16 @@
-import pytest
 import os
+
+import pytest
 from fastapi.testclient import TestClient
-from app.main import app
-from app.database import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.database import Base
+from app.main import app
+
 # Test database configuration
 TEST_DATABASE_URL = "sqlite:///./test_items.db"
+
 
 @pytest.fixture(scope="session")
 def test_engine():
@@ -15,7 +18,7 @@ def test_engine():
     engine = create_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
-        poolclass=None  # Disable connection pooling for easier cleanup
+        poolclass=None,  # Disable connection pooling for easier cleanup
     )
     yield engine
     engine.dispose()
@@ -31,6 +34,7 @@ def setup_database(test_engine):
 
     # Clean up test database file with retry logic
     import time
+
     for attempt in range(3):
         try:
             if os.path.exists("test_items.db"):
@@ -59,6 +63,7 @@ def db_session(test_engine, setup_database):
 @pytest.fixture
 def client(db_session):
     """Create a test client with database session override."""
+
     def override_get_db():
         try:
             yield db_session
@@ -66,6 +71,7 @@ def client(db_session):
             pass
 
     from app.main import get_db
+
     app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as test_client:
@@ -77,19 +83,13 @@ def client(db_session):
 @pytest.fixture
 def sample_item_data():
     """Fixture providing sample item data for tests."""
-    return {
-        "name": "Test Item",
-        "description": "Test Description"
-    }
+    return {"name": "Test Item", "description": "Test Description"}
 
 
 @pytest.fixture
 def sample_item_data_alt():
     """Fixture providing alternative sample item data for tests."""
-    return {
-        "name": "Another Item",
-        "description": "Another Description"
-    }
+    return {"name": "Another Item", "description": "Another Description"}
 
 
 @pytest.fixture
@@ -156,7 +156,9 @@ class TestItemRetrieval:
         """Test pagination parameters for getting items."""
         # Create 5 items
         for i in range(5):
-            client.post("/v1/items", json={"name": f"Item {i}", "description": f"Desc {i}"})
+            client.post(
+                "/v1/items", json={"name": f"Item {i}", "description": f"Desc {i}"}
+            )
 
         # Test limit
         response = client.get("/v1/items?limit=3")
@@ -209,7 +211,9 @@ class TestItemUpdate:
 
     def test_update_item_not_found(self, client):
         """Test updating non-existent item returns 404."""
-        response = client.put("/v1/items/999", json={"name": "Updated", "description": "Test"})
+        response = client.put(
+            "/v1/items/999", json={"name": "Updated", "description": "Test"}
+        )
 
         assert response.status_code == 404
         assert "detail" in response.json()
@@ -292,7 +296,9 @@ class TestInputValidation:
     def test_create_item_invalid_description_too_long(self, client):
         """Test creating item with description too long fails."""
         long_desc = "a" * 501  # 501 characters, exceeds max_length=500
-        response = client.post("/v1/items", json={"name": "Valid Name", "description": long_desc})
+        response = client.post(
+            "/v1/items", json={"name": "Valid Name", "description": long_desc}
+        )
 
         assert response.status_code == 422
         assert "description" in str(response.json())
@@ -309,7 +315,9 @@ class TestInputValidation:
     def test_update_item_invalid_data(self, client, created_item):
         """Test updating item with invalid data fails."""
         item_id = created_item["id"]
-        response = client.put(f"/v1/items/{item_id}", json={"name": ""})  # Invalid empty name
+        response = client.put(
+            f"/v1/items/{item_id}", json={"name": ""}
+        )  # Invalid empty name
 
         assert response.status_code == 422
         assert "name" in str(response.json())
