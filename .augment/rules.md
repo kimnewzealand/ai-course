@@ -7,19 +7,22 @@ type: "always_apply"
 ## Project Context
 
 **Before starting any task:**
-1. **Check for memory directory** - If a `memory/` directory exists in the project root, review relevant documentation files
+1. Review Augment rules in `.augment/rules/` directory
 2. Review existing documentation (README.md, CONTRIBUTING.md, docs/, etc.)
 3. Understand the project's tech stack and architecture
 4. Check for project-specific conventions and patterns
 5. Review recent changes and current priorities
 
-**Memory Directory Structure** (if exists):
-- `memory/ABOUT.md` - Project overview, goals, and purpose
-- `memory/ARCHITECTURE.md` - System design, component relationships, and technical stack
-- `memory/CONVENTIONS.md` - Coding standards, naming conventions, and patterns
-- `memory/DEVELOPMENT.md` - Setup instructions, development workflow, and environment
-- `memory/PROGRESS.md` - Current implementation status and completed features
-- `memory/TASKS.md` - Immediate next steps, priorities, and planned work
+**Augment Rules** (for AI context - automatically loaded):
+- `.augment/rules/about.md` - Project overview, goals, purpose, and technology stack
+- `.augment/rules/conventions.md` - Coding standards, naming conventions, and patterns
+- `.augment/rules/development.md` - **CRITICAL: Make commands workflow** - ALWAYS use Make commands for development tasks
+
+**Project Documentation** (for human developers):
+- `README.md` - Project overview, setup instructions, and quick start
+- `CONTRIBUTING.md` - Developer workflow, Make commands, testing, and contribution guidelines
+- `docs/ARCHITECTURE.md` - Detailed system design, component relationships, and architectural decisions
+- `CHANGELOG.md` - Release history, completed features, and stakeholder communication (semantic versioning)
 
 ## General Rules
 
@@ -31,7 +34,7 @@ type: "always_apply"
 
 ## Code Style
 - Follow the existing naming conventions in the codebase
-- Check `memory/CONVENTIONS.md` (if exists) for project-specific coding standards
+- Check `.augment/rules/conventions.md` for project-specific coding standards
 - Maintain consistency with existing code patterns
 
 ## Testing
@@ -46,26 +49,19 @@ type: "always_apply"
 - **Validate all inputs** - Sanitize and validate user data on both client and server
 - **Use parameterized queries** - Prevent SQL injection attacks
 - **Authentication & Authorization** - Implement proper auth checks
-- **HTTPS only** - Use HTTPS in production
+- **HTTPS only** - Use HTTPS only
 - **Security headers** - Set appropriate security headers (CSP, HSTS, etc.)
 - **Principle of least privilege** - Grant minimum necessary permissions
 - **Error messages** - Don't expose sensitive information in error messages
 - **Rate limiting** - Implement rate limiting to prevent abuse
 
-## Package Management
-
-### General Rules
-- **Always use package managers** - Never manually edit dependency files
-- **Keep lock files** - Commit lock files to version control
-
 ## Documentation Rules
 
 - **Update documentation** when making significant changes:
    - README.md - Setup instructions, features, usage
-   - `memory/PROGRESS.md` - After completing features (if memory directory exists)
-   - `memory/TASKS.md` - When starting/completing tasks (if memory directory exists)
-   - `memory/ARCHITECTURE.md` - When changing system design (if memory directory exists)
-   - `memory/CONVENTIONS.md` - When establishing new patterns (if memory directory exists)
+   - `CHANGELOG.md` - After completing user-facing features (use semantic versioning)
+   - `docs/ARCHITECTURE.md` - When changing system design
+   - `.augment/rules/conventions.md` - When establishing new patterns (ask first)
 
 - **Don't create new documentation files** unless requested
 
@@ -80,9 +76,9 @@ type: "always_apply"
 
 ## Git & Version Control
 
--  **Don't commit** - Never commit code
+- **Don't commit** - Never commit code
 - **Don't push** - Never push to remote
-- **Gitignore** - Ensure sensitive files are in .gitignore
+- **Gitignore** - Always Ensure sensitive files are in .gitignore
 
 
 
@@ -90,30 +86,29 @@ type: "always_apply"
 
 ## Usage Instructions
 
-### Working with Memory Directory
-
-If a `memory/` directory exists in the project:
+### Working with This Project
 
 1. **Before planning any task:**
-   - Read `memory/ABOUT.md` to understand project goals and purpose
-   - Review `memory/ARCHITECTURE.md` to understand system design
-   - Check `memory/TASKS.md` for current priorities and planned work
-   - Review `memory/CONVENTIONS.md` for coding standards
+   - Read `.augment/rules/about.md` to understand project goals and purpose
+   - Review `docs/ARCHITECTURE.md` to understand system design
+   - Check `.augment/rules/conventions.md` for coding standards
+   - Review `CONTRIBUTING.md` for developer workflow
 
 2. **During implementation:**
-   - Follow patterns documented in `memory/CONVENTIONS.md`
-   - Reference `memory/ARCHITECTURE.md` for component relationships
-   - Check `memory/DEVELOPMENT.md` for setup and workflow instructions
+   - **ALWAYS use Make commands** - Check `.augment/rules/development.md` for required Make commands
+   - Follow patterns documented in `.augment/rules/conventions.md`
+   - Reference `docs/ARCHITECTURE.md` for component relationships
+   - Check `CONTRIBUTING.md` for setup and workflow instructions
 
 3. **After completing work:**
-   - Update `memory/PROGRESS.md` with completed features
-   - Update `memory/TASKS.md` to mark tasks complete or add new ones
-   - Update `memory/ARCHITECTURE.md` if system design changed
-   - Update `memory/CONVENTIONS.md` if new patterns were established
+   - Update `CHANGELOG.md` with user-facing features (in [Unreleased] section)
+   - Update `docs/ARCHITECTURE.md` if system design changed
+   - Ask to update `.augment/rules/conventions.md` if new patterns were established
 
-### If No Memory Directory Exists
-
-- Review README.md, CONTRIBUTING.md, and any docs/ directory
+4. **At release time:**
+   - Move items from [Unreleased] to a new version section in `CHANGELOG.md`
+   - Use semantic versioning (MAJOR.MINOR.PATCH)
+   - Include release date in YYYY-MM-DD format
 - Look for inline code comments and existing patterns
 - Ask the user for clarification on conventions and priorities
 
@@ -150,7 +145,7 @@ If a `memory/` directory exists in the project:
 ### Rules Applied:
 - General Rules - "Cite your sources" - Documenting all sources used
 - Testing - "Mock external dependencies" - Planned to use mockProfileAPI
-- Documentation Rules - "Update memory/PROGRESS.md" - Will update after completion
+- Documentation Rules - "Update CHANGELOG.md" - Will update after completion
 
 ### Memory Documents Consulted:
 - memory/TASKS.md - Identified this as a high-priority task
