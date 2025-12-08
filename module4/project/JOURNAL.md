@@ -1,6 +1,6 @@
 **Exercise 1**
 
-I added context7 MCP in Augment to update some tests. This was very easy to set up and ease.
+I added context7 MCP in Augment to add tests. This was very easy to set up and use.
 
 **Exercise 2**
 
@@ -176,4 +176,45 @@ MongoDB	Custom server	Query MongoDB databases
 Pick a configuration method and try setting up your first MCP server! The SQLite example is a great place to start if you have a local database to query.
 
 Need help with a specific MCP server? Just ask!
+```
+
+**Exercise 3**
+
+I decided to try the Notion MCP as I sometimes use Notion for my personal organisation. I created a new page with some text and asked Augment about it.
+
+Augment and the MCP could not read any "pages" but when I provided the URL `https://www.notion.so/2c3dfbce573c80b6aac2d7cab6ca4bc4?v=2c3dfbce573c80fabe82000c5149bc16` , it responded:
+
+```
+
+Perfect! Let me read that Notion page:
+
+Notion
+Read the AI Agents Course page
+The URL you provided appears to be a database view rather than a page. Let me try reading it as a database:
+
+Notion
+Read the AI Agents Course database
+Excellent! I can now access your Notion database. Here's what I found:
+
+AI Agents Course Database
+Database Details:
+
+Created: December 8, 2025 at 9:57 PM
+Last Updated: December 8, 2025 at 10:01 PM
+Properties: Tags, Created
+Pages in the Database:
+1. Untitled
+URL: View Page
+Created: December 8, 2025 at 10:00 PM
+Last Edited: December 8, 2025 at 10:00 PM
+2. install Notion MCP
+URL: View Page
+Created: December 8, 2025 at 10:00 PM
+Last Edited: December 8, 2025 at 10:00 PM
+Summary
+You have 2 pages in your AI Agents Course database:
+
+An untitled page (needs a name)
+A page about installing Notion MCP
+Would you like me to read the content of either of these pages? I can show you what's inside the "install Notion MCP" page or the untitled one!
 ```
