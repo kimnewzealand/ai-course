@@ -83,13 +83,13 @@ def client(db_session):
 @pytest.fixture
 def sample_item_data():
     """Fixture providing sample item data for tests."""
-    return {"name": "Test Item", "description": "Test Description"}
+    return {"name": "Test Item", "description": "Test Description", "environment": "development"}
 
 
 @pytest.fixture
 def sample_item_data_alt():
     """Fixture providing alternative sample item data for tests."""
-    return {"name": "Another Item", "description": "Another Description"}
+    return {"name": "Another Item", "description": "Another Description", "environment": "development"}
 
 
 @pytest.fixture
@@ -120,7 +120,7 @@ class TestItemCreation:
 
     def test_create_item_minimal(self, client):
         """Test creating item with minimal required fields."""
-        response = client.post("/v1/items", json={"name": "Minimal Item"})
+        response = client.post("/v1/items", json={"name": "Minimal Item", "environment": "development"})
 
         assert response.status_code == 200
         data = response.json()
@@ -157,7 +157,7 @@ class TestItemRetrieval:
         # Create 5 items
         for i in range(5):
             client.post(
-                "/v1/items", json={"name": f"Item {i}", "description": f"Desc {i}"}
+                "/v1/items", json={"name": f"Item {i}", "description": f"Desc {i}", "environment": "development"}
             )
 
         # Test limit
@@ -197,7 +197,7 @@ class TestItemUpdate:
     def test_update_item_success(self, client, created_item):
         """Test successful item update."""
         item_id = created_item["id"]
-        update_data = {"name": "Updated Item", "description": "Updated Description"}
+        update_data = {"name": "Updated Item", "description": "Updated Description", "environment": "development"}
 
         response = client.put(f"/v1/items/{item_id}", json=update_data)
 
@@ -212,7 +212,7 @@ class TestItemUpdate:
     def test_update_item_not_found(self, client):
         """Test updating non-existent item returns 404."""
         response = client.put(
-            "/v1/items/999", json={"name": "Updated", "description": "Test"}
+            "/v1/items/999", json={"name": "Updated", "description": "Test", "environment": "development"}
         )
 
         assert response.status_code == 404
@@ -281,14 +281,14 @@ class TestInputValidation:
     def test_create_item_invalid_name_too_long(self, client):
         """Test creating item with name too long fails."""
         long_name = "a" * 101  # 101 characters, exceeds max_length=100
-        response = client.post("/v1/items", json={"name": long_name})
+        response = client.post("/v1/items", json={"name": long_name, "environment": "development"})
 
         assert response.status_code == 422  # Validation error
         assert "name" in str(response.json())
 
     def test_create_item_invalid_name_empty(self, client):
         """Test creating item with empty name fails."""
-        response = client.post("/v1/items", json={"name": ""})
+        response = client.post("/v1/items", json={"name": "", "environment": "development"})
 
         assert response.status_code == 422
         assert "name" in str(response.json())
@@ -297,7 +297,7 @@ class TestInputValidation:
         """Test creating item with description too long fails."""
         long_desc = "a" * 501  # 501 characters, exceeds max_length=500
         response = client.post(
-            "/v1/items", json={"name": "Valid Name", "description": long_desc}
+            "/v1/items", json={"name": "Valid Name", "description": long_desc, "environment": "development"}
         )
 
         assert response.status_code == 422
@@ -305,7 +305,7 @@ class TestInputValidation:
 
     def test_create_item_valid_minimal(self, client):
         """Test creating item with minimal valid data succeeds."""
-        response = client.post("/v1/items", json={"name": "a"})  # Minimal valid name
+        response = client.post("/v1/items", json={"name": "a", "environment": "development"})  # Minimal valid name
 
         assert response.status_code == 200
         data = response.json()
@@ -316,7 +316,7 @@ class TestInputValidation:
         """Test updating item with invalid data fails."""
         item_id = created_item["id"]
         response = client.put(
-            f"/v1/items/{item_id}", json={"name": ""}
+            f"/v1/items/{item_id}", json={"name": "", "environment": "development"}
         )  # Invalid empty name
 
         assert response.status_code == 422

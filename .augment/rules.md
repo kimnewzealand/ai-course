@@ -99,6 +99,10 @@ type: "always_apply"
    - Follow patterns documented in `.augment/rules/conventions.md`
    - Reference `docs/ARCHITECTURE.md` for component relationships
    - Check `CONTRIBUTING.md` for setup and workflow instructions
+   - Always use context7 when I need code generation, setup or configuration steps, or
+library/API documentation. This means you should automatically use the Context7 MCP
+tools to resolve library id and get library docs without me having to explicitly ask.
+
 
 3. **After completing work:**
    - Update `CHANGELOG.md` with user-facing features (in [Unreleased] section)
