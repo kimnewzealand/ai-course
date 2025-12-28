@@ -109,17 +109,96 @@ module6/project/
 3. Configure `pyproject.toml` with dependencies
 4. Create directory structure
 5. Set up basic README
+6. Create `.gitignore` file
+7. Create `.env.example` file
 
 **Dependencies to add:**
 ```bash
-uv add httpx pydantic pytest pytest-asyncio respx opentelemetry-api opentelemetry-sdk
+uv sync  # Installs all dependencies from pyproject.toml
+```
+
+**File:** `.gitignore`
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment
+.env
+.env.local
+
+# Runtime data
+data/conversations/*.json
+data/traces/*.json
+data/risk_reports/*.json
+
+# Keep directory structure
+!data/conversations/.gitkeep
+!data/traces/.gitkeep
+!data/risk_reports/.gitkeep
+
+# Evaluation results
+evals/baselines/*.json
+evals/reports/*.json
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+**File:** `.env.example`
+```bash
+# OpenRouter API Configuration
+OPENROUTER_API_KEY=your-api-key-here
+
+# Optional: Override default model
+# OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
 ```
 
 **Acceptance Criteria:**
-- Virtual environment created with `uv venv`
-- All dependencies installed
-- Directory structure matches plan
-- Can run `pytest` (even with no tests yet)
+- ✅ Virtual environment created with `uv venv`
+- ✅ All dependencies installed
+- ✅ Directory structure matches plan
+- ✅ Can run `pytest` (even with no tests yet)
+- ✅ `.gitignore` file created
+- ✅ `.env.example` file created
 
 #### 1.1 Configuration System
 
