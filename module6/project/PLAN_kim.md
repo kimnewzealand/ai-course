@@ -25,15 +25,30 @@ This document covers **how** to build the agent in Python - specific packages, p
 - Use `uv venv` to create the venv and `uv add` when adding dependencies
 - Never use `pip` or `uv pip` and never create `requirements.txt`
 
+## Pythonic Best Practices Applied
+This implementation follows modern Python best practices:
+- **Type Safety**: TypeAlias for complex types, comprehensive type hints
+- **Resource Management**: Async context managers (`__aenter__`/`__aexit__`) for automatic cleanup
+- **Configuration**: `pydantic-settings` for environment variable management
+- **Error Handling**: Exception chaining with `from e` to preserve stack traces
+- **Modern Python**: Pattern matching (match/case), walrus operator where appropriate
+- **Performance**: `__slots__` on Pydantic models for reduced memory usage
+- **Datetime**: `datetime.now(timezone.utc)` instead of deprecated `utcnow()`
+- **Logging**: Structured logging instead of print statements
+- **Enums**: Type-safe constants using `str, Enum` pattern
+- **Path Handling**: `pathlib.Path` for cross-platform compatibility
+- **Documentation**: Google-style docstrings with Args, Returns, Raises sections
+
 ## Implementation Steps
 The recommended order of implementation is defined in [STEPS.md](STEPS.md). The phases of implementation defined later in this document align with these progression of steps.
 
 ## Technology Stack
-- **Python 3.13.5** with async/await
+- **Python 3.13.5** with async/await and modern features (match/case, TypeAlias, etc.)
 - **uv** for dependency and venv management
 - **httpx** for HTTP client (async, HTTP/2 support)
 - **OpenTelemetry SDK** for traces and metrics
-- **pydantic** for configuration and validation
+- **pydantic** for data validation and models
+- **pydantic-settings** for configuration management with environment variables
 - **pytest** + **pytest-asyncio** for testing
 - **respx** for mocking httpx in tests
 
@@ -44,10 +59,13 @@ module6/project/
 ├── src/
 │   └── detective_agent/
 │       ├── __init__.py
-│       ├── config.py              # Configuration management
-│       ├── config_test.py          # Configuration test
-│       ├── models.py               # Data models (Message, Conversation, etc.)
-│       ├── models_test.py          # Data models test
+│       ├── py.typed                 # PEP 561 marker for type checkers
+│       ├── types.py                 # Shared type aliases (MessageList, etc.)
+│       ├── config.py                # Configuration management
+│       ├── config_test.py           # Configuration test
+│       ├── models.py                # Data models (Message, Conversation, etc.)
+│       ├── models_test.py           # Data models test
+│       ├── conftest.py              # Shared pytest fixtures for unit tests
 │       ├── providers/
 │       │   ├── __init__.py
 │       │   ├── base.py            # Provider Protocol
@@ -78,20 +96,30 @@ module6/project/
 │       ├── persistence_test.py      # Conversation persistence test
 │       └── cli.py                  # CLI interface
 ├── tests/
+│   ├── __init__.py
+│   ├── conftest.py                  # Shared fixtures for integration tests
 │   ├── integration/
+│   │   ├── conftest.py              # Integration-specific fixtures with mock mode
 │   │   └── test_agent_workflow.py
 │   └── fixtures/
 │       └── mock_releases.json
 ├── data/
 │   ├── conversations/              # Saved conversations
-│   └── traces/                     # OpenTelemetry traces
+│   │   └── .gitkeep
+│   ├── traces/                     # OpenTelemetry traces
+│   │   └── .gitkeep
+│   └── risk_reports/               # Filed risk reports
+│       └── .gitkeep
 ├── evals/
+│   ├── __init__.py
 │   ├── scenarios/                  # Evaluation test cases
 │   ├── baselines/                  # Baseline results
 │   ├── runner.py                   # Evaluation runner
 │   └── reports/                    # Evaluation reports
-├── pyproject.toml
-└── README.md
+├── .env.example                    # Environment variable template
+├── .gitignore                      # Git ignore patterns
+├── pyproject.toml                  # Project configuration
+└── README.md                       # Project documentation
 ```
 
 ## Step-by-Step Implementation
@@ -114,7 +142,73 @@ module6/project/
 
 **Dependencies to add:**
 ```bash
-uv sync  # Installs all dependencies from pyproject.toml
+# Core dependencies
+uv add httpx pydantic pydantic-settings
+
+# Testing dependencies (includes coverage for >80% target)
+uv add --dev pytest pytest-asyncio respx pytest-cov
+
+# Type checking dependencies
+uv add --dev mypy types-respx
+
+# OpenTelemetry dependencies (added in Step 2)
+# uv add opentelemetry-api opentelemetry-sdk
+
+# Install all dependencies
+uv sync
+```
+
+**File:** `pyproject.toml`
+```toml
+[project]
+name = "detective-agent"
+version = "0.1.0"
+description = "AI agent for release risk assessment"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.27.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "respx>=0.21.0",
+    "mypy>=1.11.0",
+    "types-respx>=0.21.0",
+]
+
+[project.scripts]
+detective-agent = "detective_agent.cli:main_sync"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["src", "tests"]
+python_files = ["*_test.py", "test_*.py"]
+addopts = "--cov=detective_agent --cov-report=term-missing --cov-fail-under=80"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/detective_agent"]
 ```
 
 **File:** `.gitignore`
@@ -185,11 +279,19 @@ Thumbs.db
 
 **File:** `.env.example`
 ```bash
-# OpenRouter API Configuration
+# OpenRouter API Configuration (Required)
 OPENROUTER_API_KEY=your-api-key-here
 
-# Optional: Override default model
+# Optional: Override defaults
 # OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
+# OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+# OPENROUTER_TEMPERATURE=0.7
+# OPENROUTER_MAX_TOKENS=4096
+# OPENROUTER_TIMEOUT=30.0
+
+# Agent Configuration (Optional)
+# CONVERSATION_DIR=data/conversations
+# TRACE_DIR=data/traces
 ```
 
 **Acceptance Criteria:**
@@ -206,35 +308,94 @@ OPENROUTER_API_KEY=your-api-key-here
 
 **Implementation:**
 ```python
-from pydantic import BaseModel, Field
-from typing import Optional
+from pathlib import Path
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class ProviderConfig(BaseModel):
-    """Configuration for LLM provider"""
-    name: str = "openrouter"
-    api_key: str
+class ProviderConfig(BaseSettings):
+    """Configuration for LLM provider with environment variable support"""
+    model_config = SettingsConfigDict(
+        env_prefix="OPENROUTER_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+    api_key: str  # Reads from OPENROUTER_API_KEY
+    model: str = "meta-llama/llama-3.1-8b-instruct:free"  # OPENROUTER_MODEL
     base_url: str = "https://openrouter.ai/api/v1"
-    model: str = "meta-llama/llama-3.1-8b-instruct:free"
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=4096, gt=0)
     timeout: float = 30.0
 
-class AgentConfig(BaseModel):
-    """Main agent configuration"""
-    provider: ProviderConfig
+class AgentConfig(BaseSettings):
+    """Main agent configuration with environment variable support"""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    provider: ProviderConfig | None = None
     system_prompt: str = "You are a helpful AI assistant."
-    conversation_dir: str = "data/conversations"
-    trace_dir: str = "data/traces"
+    conversation_dir: Path = Path("data/conversations")
+    trace_dir: Path = Path("data/traces")
+
+    @model_validator(mode='before')
+    @classmethod
+    def load_provider_from_env(cls, data: dict) -> dict:
+        """Ensure nested ProviderConfig is properly loaded from environment."""
+        if 'provider' not in data or data['provider'] is None:
+            data['provider'] = ProviderConfig()
+        return data
+
+    @field_validator('conversation_dir', 'trace_dir', mode='after')
+    @classmethod
+    def ensure_directory_exists(cls, v: Path) -> Path:
+        """Create directory if it doesn't exist."""
+        v.mkdir(parents=True, exist_ok=True)
+        return v
 ```
 
-**Environment Variables:**
-- `OPENROUTER_API_KEY`: API key for OpenRouter
+**Environment Variables (automatically loaded via pydantic-settings):**
+- `OPENROUTER_API_KEY`: API key for OpenRouter (required)
 - `OPENROUTER_MODEL`: Model to use (default: meta-llama/llama-3.1-8b-instruct:free)
+- `OPENROUTER_BASE_URL`: Base URL (default: https://openrouter.ai/api/v1)
+- `OPENROUTER_TEMPERATURE`: Temperature (default: 0.7)
+- `OPENROUTER_MAX_TOKENS`: Max tokens (default: 4096)
+- `OPENROUTER_TIMEOUT`: Timeout in seconds (default: 30.0)
 
 **Tests:** `src/detective_agent/config_test.py`
-- Test configuration validation
+- Test configuration validation with pydantic-settings
 - Test default values
-- Test environment variable loading
+- Test environment variable loading from .env file
+- Test missing required fields (OPENROUTER_API_KEY)
+- Test invalid values (temperature out of range, etc.)
+
+#### 1.1.1 Shared Type Definitions
+
+**File:** `src/detective_agent/types.py`
+
+**Implementation:**
+```python
+"""Shared type aliases for the detective agent package.
+
+This module provides a single source of truth for all type aliases
+used throughout the codebase, preventing duplication and ensuring consistency.
+"""
+from typing import Any, Literal, TypeAlias
+
+from detective_agent.models import Message
+
+# Message-related types
+MessageList: TypeAlias = list[Message]
+MessageRole: TypeAlias = Literal["user", "assistant", "system", "tool"]
+MetadataDict: TypeAlias = dict[str, Any]
+
+# Release-related types
+ReleaseData: TypeAlias = dict[str, Any]
+```
+
+**Note:** Import from this module instead of defining TypeAliases locally:
+```python
+from detective_agent.types import MessageList, MessageRole
+```
 
 #### 1.2 Data Models
 
@@ -242,28 +403,45 @@ class AgentConfig(BaseModel):
 
 **Implementation:**
 ```python
-from pydantic import BaseModel, Field
-from typing import Literal, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any, Literal, TypeAlias
 from uuid import uuid4
+
+from pydantic import BaseModel, ConfigDict, Field
+
+# Type aliases for clarity
+MessageRole: TypeAlias = Literal["user", "assistant", "system", "tool"]
+MetadataDict: TypeAlias = dict[str, Any]
 
 class Message(BaseModel):
     """Single message in a conversation"""
-    role: Literal["user", "assistant", "system"]
+    model_config = ConfigDict(frozen=False, slots=True)
+
+    role: MessageRole
     content: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: MetadataDict = Field(default_factory=dict)
 
 class Conversation(BaseModel):
     """Ongoing dialogue between user and agent"""
+    model_config = ConfigDict(frozen=False, slots=True)
+
     id: str = Field(default_factory=lambda: str(uuid4()))
     system_prompt: str
     messages: list[Message] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: MetadataDict = Field(default_factory=dict)
 
-    def add_message(self, role: str, content: str) -> Message:
-        """Add a message to the conversation"""
+    def add_message(self, role: MessageRole, content: str) -> Message:
+        """Add a message to the conversation.
+
+        Args:
+            role: The role of the message sender.
+            content: The message content.
+
+        Returns:
+            The created Message object.
+        """
         msg = Message(role=role, content=content)
         self.messages.append(msg)
         return msg
@@ -281,8 +459,25 @@ class Conversation(BaseModel):
 
 **Implementation:**
 ```python
+from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
+
+from detective_agent.types import MessageList  # Import from shared types module
 from detective_agent.models import Message
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCapabilities:
+    """Capabilities supported by a provider.
+
+    Used to determine what features a provider supports before attempting
+    to use them (e.g., tool calling, streaming, vision).
+    """
+    supports_tools: bool = False
+    supports_streaming: bool = False
+    supports_vision: bool = False
+    max_context_tokens: int = 128000
+
 
 @runtime_checkable
 class Provider(Protocol):
@@ -290,15 +485,44 @@ class Provider(Protocol):
 
     async def complete(
         self,
-        messages: list[Message],
+        messages: MessageList,
         temperature: float,
         max_tokens: int,
+        tools: list[dict] | None = None,  # Added from start for Step 6 compatibility
     ) -> Message:
-        """Send messages to LLM and get response"""
+        """Send messages to LLM and get response.
+
+        Args:
+            messages: List of messages in the conversation.
+            temperature: Sampling temperature (0.0 to 2.0).
+            max_tokens: Maximum tokens to generate.
+            tools: Optional list of tool definitions for function calling.
+
+        Returns:
+            Assistant's response message.
+
+        Raises:
+            ProviderError: If the API call fails.
+        """
         ...
 
-    def estimate_tokens(self, messages: list[Message]) -> int:
-        """Estimate token count for messages"""
+    def estimate_tokens(self, messages: MessageList) -> int:
+        """Estimate token count for messages.
+
+        Args:
+            messages: List of messages to estimate.
+
+        Returns:
+            Estimated token count.
+        """
+        ...
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        """Report what this provider supports.
+
+        Returns:
+            ProviderCapabilities with flags for supported features.
+        """
         ...
 ```
 
@@ -325,6 +549,10 @@ class ValidationError(ProviderError):
 class NetworkError(ProviderError):
     """Connection issues"""
     pass
+
+class TimeoutError(ProviderError):
+    """Request timed out - retryable error"""
+    pass
 ```
 
 #### 1.4 OpenRouter Provider Implementation
@@ -334,91 +562,189 @@ class NetworkError(ProviderError):
 **Implementation:**
 ```python
 import httpx
-from detective_agent.models import Message
+
 from detective_agent.config import ProviderConfig
+from detective_agent.models import Message
+from detective_agent.types import MessageList  # Import from shared types module
 from detective_agent.providers.errors import (
-    AuthenticationError, RateLimitError,
-    ValidationError, NetworkError, ProviderError
+    AuthenticationError,
+    NetworkError,
+    ProviderError,
+    RateLimitError,
+    TimeoutError,
+    ValidationError,
 )
 
 class OpenRouterProvider:
-    """OpenRouter API provider implementation"""
+    """OpenRouter API provider with async context manager support"""
 
     def __init__(self, config: ProviderConfig):
         self.config = config
-        self.client = httpx.AsyncClient(
-            base_url=config.base_url,
-            timeout=config.timeout,
+        self._client: httpx.AsyncClient | None = None
+
+    async def __aenter__(self) -> "OpenRouterProvider":
+        """Enter async context manager and initialize HTTP client"""
+        from httpx import Timeout
+
+        self._client = httpx.AsyncClient(
+            base_url=self.config.base_url,
+            timeout=Timeout(
+                connect=5.0,  # Fast fail on connection issues
+                read=self.config.timeout,  # Allow longer read for LLM responses
+                write=10.0,
+                pool=5.0
+            ),
             headers={
-                "Authorization": f"Bearer {config.api_key}",
+                "Authorization": f"Bearer {self.config.api_key}",
                 "HTTP-Referer": "https://github.com/yourusername/detective-agent",
                 "X-Title": "Detective Agent"
             }
         )
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Exit async context manager and cleanup resources"""
+        if self._client:
+            await self._client.aclose()
+
+    @property
+    def client(self) -> httpx.AsyncClient:
+        """Get HTTP client, ensuring it's initialized"""
+        if self._client is None:
+            raise RuntimeError(
+                "Provider not initialized. Use 'async with' context manager."
+            )
+        return self._client
 
     async def complete(
         self,
-        messages: list[Message],
+        messages: MessageList,
         temperature: float,
         max_tokens: int,
+        tools: list[dict] | None = None,
     ) -> Message:
-        """Call OpenRouter API"""
+        """Call OpenRouter API to generate completion.
+
+        Args:
+            messages: List of messages in the conversation.
+            temperature: Sampling temperature (0.0 to 2.0).
+            max_tokens: Maximum tokens to generate.
+            tools: Optional list of tool definitions for function calling.
+
+        Returns:
+            Assistant's response message.
+
+        Raises:
+            AuthenticationError: Invalid API key.
+            RateLimitError: Rate limit exceeded.
+            ValidationError: Invalid request format.
+            NetworkError: Connection issues.
+            TimeoutError: Request timed out.
+            ProviderError: Other API errors.
+        """
+        # Format messages for OpenAI/OpenRouter API
+        formatted_messages = []
+        for m in messages:
+            msg_dict = {"role": m.role, "content": m.content}
+
+            # Assistant messages may have tool_calls
+            if m.role == "assistant" and m.metadata.get("tool_calls"):
+                msg_dict["tool_calls"] = m.metadata["tool_calls"]
+                # Content can be null when tool_calls present
+                if not m.content:
+                    msg_dict["content"] = None
+
+            # Tool response messages need tool_call_id
+            if m.role == "tool" and m.metadata.get("tool_call_id"):
+                msg_dict["tool_call_id"] = m.metadata["tool_call_id"]
+
+            formatted_messages.append(msg_dict)
+
+        request_body = {
+            "model": self.config.model,
+            "messages": formatted_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
+        if tools:
+            request_body["tools"] = tools
+
         try:
-            response = await self.client.post(
-                "/chat/completions",
-                json={
-                    "model": self.config.model,
-                    "messages": [
-                        {"role": m.role, "content": m.content}
-                        for m in messages
-                    ],
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                }
-            )
+            response = await self.client.post("/chat/completions", json=request_body)
             response.raise_for_status()
             data = response.json()
 
-            content = data["choices"][0]["message"]["content"]
+            message = data["choices"][0]["message"]
+            content = message.get("content") or ""  # Content may be None when tool_calls present
+            tool_calls = message.get("tool_calls")
+
             metadata = {
                 "model": data.get("model"),
                 "usage": data.get("usage", {}),
                 "provider": "openrouter"
             }
 
-            return Message(
-                role="assistant",
-                content=content,
-                metadata=metadata
-            )
+            # Include tool_calls in metadata if present
+            if tool_calls:
+                metadata["tool_calls"] = tool_calls
 
+            return Message(role="assistant", content=content, metadata=metadata)
+
+        except httpx.TimeoutException as e:
+            raise TimeoutError(f"Request timed out: {str(e)}") from e
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise AuthenticationError("Invalid API key")
+                raise AuthenticationError("Invalid API key") from e
             elif e.response.status_code == 429:
-                raise RateLimitError("Rate limit exceeded")
+                raise RateLimitError("Rate limit exceeded") from e
             elif e.response.status_code == 400:
-                raise ValidationError(f"Invalid request: {e.response.text}")
+                raise ValidationError(f"Invalid request: {e.response.text}") from e
             else:
-                raise ProviderError(f"HTTP {e.response.status_code}: {e.response.text}")
+                raise ProviderError(
+                    f"HTTP {e.response.status_code}: {e.response.text}"
+                ) from e
         except httpx.RequestError as e:
-            raise NetworkError(f"Network error: {str(e)}")
+            raise NetworkError(f"Network error: {str(e)}") from e
 
-    def estimate_tokens(self, messages: list[Message]) -> int:
-        """Rough token estimation (4 chars ≈ 1 token)"""
-        total_chars = sum(len(m.content) for m in messages)
-        return total_chars // 4
+    def estimate_tokens(self, messages: MessageList) -> int:
+        """Rough token estimation (4 chars ≈ 1 token).
 
-    async def close(self):
-        """Close HTTP client"""
-        await self.client.aclose()
+        Uses ~4 chars per token for content, plus overhead per message.
+
+        Args:
+            messages: List of messages to estimate.
+
+        Returns:
+            Estimated token count.
+        """
+        content_tokens = sum(len(m.content) for m in messages) // 4
+        # Add ~4 tokens overhead per message for role, delimiters
+        message_overhead = len(messages) * 4
+        return content_tokens + message_overhead
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        """Report OpenRouter provider capabilities.
+
+        Returns:
+            ProviderCapabilities indicating OpenRouter supports tools.
+        """
+        return ProviderCapabilities(
+            supports_tools=True,
+            supports_streaming=False,  # Not implemented yet
+            supports_vision=False,  # Model-dependent
+            max_context_tokens=128000,  # Llama 3.1 context window
+        )
 ```
 
 **Tests:** `src/detective_agent/providers/openrouter_test.py`
 - Test successful completion (using respx to mock)
-- Test error handling (401, 429, 400, 500)
+- Test error handling (401, 429, 400, 500) with exception chaining
 - Test token estimation
 - Test message formatting
+- Test async context manager (__aenter__ and __aexit__)
+- Test client property raises error when not initialized
+- Test get_capabilities returns correct values
 
 #### 1.5 Conversation Persistence
 
@@ -539,71 +865,101 @@ class DetectiveAgent:
 **Implementation:**
 ```python
 import asyncio
-import os
+import logging
+
+from pydantic import ValidationError
+
 from detective_agent.agent import DetectiveAgent
+from detective_agent.config import AgentConfig
 from detective_agent.providers.openrouter import OpenRouterProvider
-from detective_agent.config import AgentConfig, ProviderConfig
-from detective_agent.persistence import ConversationStore
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 async def main():
     """CLI for interacting with the agent"""
-    # Load configuration
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("Error: OPENROUTER_API_KEY environment variable not set")
+    # Load configuration from environment
+    try:
+        config = AgentConfig()
+    except ValidationError as e:
+        logger.error(f"Configuration error: {e}")
+        logger.error("Make sure OPENROUTER_API_KEY is set in .env file")
         return
 
-    provider_config = ProviderConfig(
-        api_key=api_key,
-        model=os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
-    )
-
-    agent_config = AgentConfig(provider=provider_config)
-
-    # Initialize provider and agent
-    provider = OpenRouterProvider(provider_config)
-    agent = DetectiveAgent(provider, agent_config)
+    logger.info("Detective Agent CLI started")
+    logger.info(f"Using model: {config.provider.model}")
 
     print("Detective Agent CLI")
     print("Type 'exit' to quit, 'new' for new conversation, 'history' to see messages")
     print("-" * 60)
 
-    try:
+    # Use async context manager for automatic cleanup
+    async with OpenRouterProvider(config.provider) as provider:
+        agent = DetectiveAgent(provider, config)
+
         while True:
-            user_input = input("\nYou: ").strip()
-
-            if user_input.lower() == "exit":
+            try:
+                user_input = input("\nYou: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                logger.info("Received interrupt signal")
                 break
-            elif user_input.lower() == "new":
-                agent.new_conversation()
-                print("Started new conversation")
-                continue
-            elif user_input.lower() == "history":
-                for msg in agent.get_history():
-                    print(f"{msg.role}: {msg.content[:100]}...")
-                continue
-            elif not user_input:
-                continue
 
-            response = await agent.send_message(user_input)
-            print(f"\nAssistant: {response}")
+            # Use pattern matching for command handling
+            match user_input.lower():
+                case "exit" | "quit":
+                    logger.info("User requested exit")
+                    break
+                case "new":
+                    agent.new_conversation()
+                    logger.info("Started new conversation")
+                    print("Started new conversation")
+                case "history":
+                    for msg in agent.get_history():
+                        print(f"{msg.role}: {msg.content[:100]}...")
+                case "" | None:
+                    continue
+                case _:
+                    try:
+                        response = await agent.send_message(user_input)
+                        print(f"\nAssistant: {response}")
+                    except Exception as e:
+                        logger.error(f"Error processing message: {e}", exc_info=True)
+                        print(f"Error: {e}")
 
-    finally:
-        await provider.close()
+    logger.info("Detective Agent CLI stopped")
+
+def main_sync():
+    """Synchronous wrapper for console script entry point.
+
+    This enables the 'detective-agent' command via pyproject.toml scripts.
+    """
+    asyncio.run(main())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main_sync()
 ```
 
 **Acceptance Criteria for Step 1:**
-- ✅ CLI starts and connects to OpenRouter
+- ✅ CLI starts and connects to OpenRouter using pydantic-settings
 - ✅ User can send messages and receive responses
 - ✅ Conversation history maintained in memory
 - ✅ Conversations saved to filesystem as JSON
 - ✅ Can continue previous conversations
-- ✅ Basic error handling for API failures
+- ✅ Proper error handling with exception chaining
+- ✅ Async context manager for resource cleanup
+- ✅ Logging instead of print statements
+- ✅ Pattern matching for CLI commands
+- ✅ Type aliases for complex types
 - ✅ At least 3 automated tests per module
 - ✅ Provider abstraction interface defined
+- ✅ Provider reports capabilities via `get_capabilities()` method
+
+**Deferred to Step 2 (Observability):**
+- `get_context()` method on DetectiveAgent - provides conversation metadata including message count, token usage, provider info, trace IDs, and tool calls. This is deferred because it depends on tracing infrastructure from Step 2.
 
 ---
 
@@ -646,22 +1002,27 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 
 class FilesystemSpanExporter(SpanExporter):
-    """Export spans to filesystem as JSON"""
+    """Export spans to filesystem as JSON.
+
+    Writes traces immediately to prevent data loss on crash.
+    Each span is appended to its trace file as it's exported.
+    """
 
     def __init__(self, base_dir: str = "data/traces"):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.traces = {}  # trace_id -> list of spans
 
     def export(self, spans: list[ReadableSpan]) -> SpanExportResult:
-        """Export spans to filesystem"""
+        """Export spans to filesystem immediately.
+
+        Writes each span to disk as it's received to prevent
+        data loss on crash. Appends to existing trace files.
+        """
         for span in spans:
             trace_id = format(span.context.trace_id, '032x')
+            file_path = self.base_dir / f"{trace_id}.json"
 
-            if trace_id not in self.traces:
-                self.traces[trace_id] = []
-
-            self.traces[trace_id].append({
+            span_data = {
                 "name": span.name,
                 "trace_id": trace_id,
                 "span_id": format(span.context.span_id, '016x'),
@@ -671,26 +1032,32 @@ class FilesystemSpanExporter(SpanExporter):
                 "duration_ns": span.end_time - span.start_time,
                 "attributes": dict(span.attributes) if span.attributes else {},
                 "status": str(span.status),
-            })
+            }
+
+            # Append to existing trace file or create new one
+            if file_path.exists():
+                with open(file_path, "r+") as f:
+                    data = json.load(f)
+                    data["spans"].append(span_data)
+                    f.seek(0)
+                    json.dump(data, f, indent=2, default=str)
+                    f.truncate()
+            else:
+                with open(file_path, "w") as f:
+                    json.dump({
+                        "trace_id": trace_id,
+                        "spans": [span_data]
+                    }, f, indent=2, default=str)
 
         return SpanExportResult.SUCCESS
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Flush all traces to disk"""
-        for trace_id, spans in self.traces.items():
-            file_path = self.base_dir / f"{trace_id}.json"
-            with open(file_path, "w") as f:
-                json.dump({
-                    "trace_id": trace_id,
-                    "spans": spans
-                }, f, indent=2, default=str)
-
-        self.traces.clear()
+        """Flush is a no-op since we write immediately."""
         return True
 
     def shutdown(self) -> None:
-        """Shutdown exporter"""
-        self.force_flush()
+        """Shutdown exporter - nothing to flush since we write immediately."""
+        pass
 ```
 
 #### 2.3 Instrument Agent Operations
@@ -767,7 +1134,9 @@ async def complete(self, messages: list[Message], temperature: float, max_tokens
 
             return Message(...)
         except Exception as e:
+            from opentelemetry.trace import StatusCode
             span.record_exception(e)
+            span.set_status(StatusCode.ERROR, str(e))  # Mark span as error
             raise
 ```
 
@@ -804,7 +1173,9 @@ class Conversation(BaseModel):
 
 ---
 
-### Step 3: Context Window Management
+### Step 3: Context Window Management [DEFERRED]
+
+> **⚠️ DEFERRED**: This step is deferred and will not be implemented at this time.
 
 **Goal:** Handle conversations exceeding token limits using truncation strategy
 
@@ -940,14 +1311,14 @@ class DetectiveAgent:
             # ... rest of existing code ...
 ```
 
-**Acceptance Criteria for Step 3:**
-- ✅ Agent calculates token count before each call
-- ✅ Conversation truncates when needed
-- ✅ System prompt always preserved
-- ✅ Last 6 messages preserved (3 user + 3 assistant)
-- ✅ Context window state visible in traces
-- ✅ Long conversations don't cause API errors
-- ✅ Automated tests verify truncation behavior
+**Acceptance Criteria for Step 3:** [DEFERRED]
+- ⏸️ Agent calculates token count before each call
+- ⏸️ Conversation truncates when needed
+- ⏸️ System prompt always preserved
+- ⏸️ Last 6 messages preserved (3 user + 3 assistant)
+- ⏸️ Context window state visible in traces
+- ⏸️ Long conversations don't cause API errors
+- ⏸️ Automated tests verify truncation behavior
 
 ---
 
@@ -965,7 +1336,7 @@ import asyncio
 import random
 from typing import TypeVar, Callable, Awaitable
 from detective_agent.providers.errors import (
-    RateLimitError, NetworkError, ProviderError,
+    RateLimitError, NetworkError, ProviderError, TimeoutError,
     AuthenticationError, ValidationError
 )
 from detective_agent.observability.tracing import tracer
@@ -1007,7 +1378,7 @@ async def execute_with_retry(
                     span.set_attribute("retry.succeeded_after_retries", True)
                 return result
 
-            except (RateLimitError, NetworkError, ProviderError) as e:
+            except (RateLimitError, NetworkError, TimeoutError, ProviderError) as e:
                 last_exception = e
                 span.record_exception(e)
                 span.set_attribute("retry.error_type", type(e).__name__)
@@ -1043,6 +1414,7 @@ async def execute_with_retry(
 - Test successful operation (no retry)
 - Test retry on RateLimitError
 - Test retry on NetworkError
+- Test retry on TimeoutError
 - Test exponential backoff calculation
 - Test jitter application
 - Test max attempts exhausted
@@ -1142,7 +1514,7 @@ class AgentConfig(BaseModel):
 Add tool-related models:
 ```python
 from typing import Callable, Awaitable
-from datetime import datetime
+from datetime import datetime, timezone
 
 class ToolDefinition(BaseModel):
     """Definition of a callable tool"""
@@ -1156,14 +1528,14 @@ class ToolCall(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
     arguments: dict[str, Any]
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ToolResult(BaseModel):
     """Result of tool execution"""
     tool_call_id: str
     content: str
     success: bool
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: dict[str, Any] = Field(default_factory=dict)
 ```
 
@@ -1277,52 +1649,104 @@ class ToolRegistry:
 
 **File:** `src/detective_agent/tools/release_tools.py`
 
+Release data is loaded from `releases.json` file instead of hardcoded mock data.
+This allows the agent to work with real release information.
+
 ```python
 import json
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from datetime import datetime
-from detective_agent.models import ToolDefinition
+from typing import Any, TypeAlias
 
-# Mock release data
-MOCK_RELEASES = {
-    "v2.1.0": {
-        "version": "v2.1.0",
-        "changes": ["Added payment processing", "Fixed authentication bug"],
-        "tests": {"passed": 142, "failed": 2, "skipped": 5},
-        "deployment_metrics": {
-            "error_rate": 0.02,
-            "response_time_p95": 450
-        }
-    },
-    "v2.0.0": {
-        "version": "v2.0.0",
-        "changes": ["Minor UI updates", "Performance improvements"],
-        "tests": {"passed": 149, "failed": 0, "skipped": 0},
-        "deployment_metrics": {
-            "error_rate": 0.001,
-            "response_time_p95": 320
-        }
-    }
-}
+# Type aliases
+ReleaseData: TypeAlias = dict[str, Any]
 
-async def get_release_summary(args: dict) -> dict:
-    """Get release summary tool handler"""
-    release_id = args.get("release_id", "v2.1.0")
+# Default path to releases.json (relative to project root)
+DEFAULT_RELEASES_PATH = Path("releases.json")
 
-    if release_id in MOCK_RELEASES:
-        return MOCK_RELEASES[release_id]
+class RiskSeverity(str, Enum):
+    """Risk severity levels for release assessments"""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+class ReleaseDataError(Exception):
+    """Error loading or parsing release data."""
+    pass
+
+def load_releases(releases_path: Path | None = None) -> dict[str, ReleaseData]:
+    """Load release data from JSON file.
+
+    Args:
+        releases_path: Path to the releases.json file. Defaults to project root.
+
+    Returns:
+        Dictionary mapping release IDs to release data.
+
+    Raises:
+        ReleaseDataError: If file not found or JSON parsing fails.
+    """
+    path = releases_path or DEFAULT_RELEASES_PATH
+
+    if not path.exists():
+        raise ReleaseDataError(f"Releases file not found: {path}")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    except json.JSONDecodeError as e:
+        raise ReleaseDataError(f"Invalid JSON in releases file: {e}") from e
+
+async def get_release_summary(
+    args: dict[str, Any], releases_path: Path | None = None
+) -> ReleaseData:
+    """Get release summary tool handler.
+
+    Args:
+        args: Dictionary containing release_id.
+        releases_path: Optional path to releases.json for testing.
+
+    Returns:
+        Release data dictionary or error.
+    """
+    release_id = args.get("release_id", "")
+
+    try:
+        releases = load_releases(releases_path)
+    except ReleaseDataError as e:
+        return {"error": str(e)}
+
+    if release_id in releases:
+        return releases[release_id]
     else:
-        return {"error": f"Release {release_id} not found"}
+        return {"error": f"Release {release_id} not found", "available_releases": list(releases.keys())}
 
-async def file_risk_report(args: dict) -> dict:
-    """File risk report tool handler"""
+async def file_risk_report(args: dict[str, Any]) -> dict[str, str]:
+    """File risk report tool handler.
+
+    Args:
+        args: Dictionary containing release_id, severity, and findings.
+
+    Returns:
+        Status dictionary with report information.
+
+    Raises:
+        ValueError: If severity is invalid.
+    """
     release_id = args.get("release_id")
-    severity = args.get("severity")
+    severity_str = args.get("severity")
     findings = args.get("findings", [])
 
-    # Validate severity
-    if severity not in ["high", "medium", "low"]:
-        raise ValueError(f"Invalid severity: {severity}")
+    # Validate severity using Enum
+    try:
+        severity = RiskSeverity(severity_str)
+    except ValueError as e:
+        valid_severities = ", ".join(s.value for s in RiskSeverity)
+        raise ValueError(
+            f"Invalid severity: {severity_str}. Must be one of: {valid_severities}"
+        ) from e
 
     # Save report to filesystem
     report_dir = Path("data/risk_reports")
@@ -1330,19 +1754,18 @@ async def file_risk_report(args: dict) -> dict:
 
     report = {
         "release_id": release_id,
-        "severity": severity,
+        "severity": severity.value,
         "findings": findings,
-        "timestamp": str(datetime.utcnow())
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
     report_file = report_dir / f"{release_id}_risk_report.json"
-    with open(report_file, "w") as f:
-        json.dump(report, f, indent=2)
+    report_file.write_text(json.dumps(report, indent=2))
 
     return {
         "status": "success",
         "report_id": f"{release_id}_risk_report",
-        "message": f"Risk report filed for {release_id} with severity: {severity}"
+        "message": f"Risk report filed for {release_id} with severity: {severity.value}"
     }
 
 # Tool definitions
@@ -1390,11 +1813,48 @@ FILE_RISK_REPORT_TOOL = ToolDefinition(
 ```
 
 **Tests:** `src/detective_agent/tools/release_tools_test.py`
-- Test get_release_summary with valid release
+
+Tests use a `MOCK_RELEASES` fixture to provide test data without reading from the actual `releases.json` file, maintaining test isolation:
+
+```python
+import pytest
+from pathlib import Path
+import tempfile
+import json
+
+# Test fixture for mock release data
+MOCK_RELEASES = {
+    "v2.1.0": {
+        "version": "v2.1.0",
+        "changes": ["Added payment processing", "Fixed authentication bug"],
+        "tests": {"passed": 142, "failed": 2, "skipped": 5},
+        "deployment_metrics": {"error_rate": 0.02, "response_time_p95": 450}
+    },
+    "v2.0.0": {
+        "version": "v2.0.0",
+        "changes": ["Minor UI updates"],
+        "tests": {"passed": 149, "failed": 0, "skipped": 0},
+        "deployment_metrics": {"error_rate": 0.001, "response_time_p95": 320}
+    }
+}
+
+@pytest.fixture
+def mock_releases_file(tmp_path):
+    """Create a temporary releases.json file for testing."""
+    releases_file = tmp_path / "releases.json"
+    releases_file.write_text(json.dumps(MOCK_RELEASES))
+    return releases_file
+```
+
+Test cases:
+- Test get_release_summary with valid release (using fixture)
 - Test get_release_summary with invalid release
+- Test list_releases functionality
 - Test file_risk_report with valid data
 - Test file_risk_report with invalid severity
 - Test report file creation
+- Test error handling for file not found
+- Test error handling for invalid JSON
 
 #### 6.5 Update Provider for Tool Calling
 
@@ -1523,10 +1983,28 @@ class DetectiveAgent:
 
                     # Execute each tool
                     for tc_data in tool_calls_data:
+                        # Safely parse JSON arguments from LLM
+                        try:
+                            arguments = json.loads(tc_data["function"]["arguments"])
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to parse tool arguments: {e}")
+                            # Add error message to conversation and continue
+                            error_msg = Message(
+                                role="tool",
+                                content=f"Error: Invalid JSON in tool arguments: {e}",
+                                metadata={
+                                    "tool_call_id": tc_data["id"],
+                                    "tool_name": tc_data["function"]["name"],
+                                    "error": True
+                                }
+                            )
+                            self.conversation.messages.append(error_msg)
+                            continue
+
                         tool_call = ToolCall(
                             id=tc_data["id"],
                             name=tc_data["function"]["name"],
-                            arguments=json.loads(tc_data["function"]["arguments"])
+                            arguments=arguments
                         )
 
                         # Execute tool
@@ -1556,6 +2034,7 @@ class DetectiveAgent:
 - Test tool loop with multiple tool calls
 - Test tool loop termination
 - Test max iterations exceeded
+- Test JSON parse error handling (malformed tool arguments)
 
 **Acceptance Criteria for Step 6:**
 - ✅ Tool abstraction interface defined
@@ -1848,7 +2327,24 @@ class EvaluationRunner:
 - Each module has co-located `_test.py` file
 - Use `pytest` and `pytest-asyncio`
 - Mock external dependencies with `respx`
-- Aim for >80% code coverage
+- Aim for >80% code coverage (enforced via pytest-cov)
+
+**Shared test fixtures:**
+```python
+# src/detective_agent/conftest.py
+import pytest
+from detective_agent.config import ProviderConfig, AgentConfig
+
+@pytest.fixture
+def mock_provider_config():
+    """Provide a test configuration without real API key."""
+    return ProviderConfig(api_key="test-key-not-real")
+
+@pytest.fixture
+def mock_agent_config(mock_provider_config):
+    """Provide a test agent configuration."""
+    return AgentConfig(provider=mock_provider_config)
+```
 
 **Example test structure:**
 ```python
@@ -1886,36 +2382,79 @@ async def test_complete_success():
 ### Integration Tests
 - Located in `/tests/integration/`
 - Test end-to-end workflows
-- Use real provider calls (with test API keys)
+- Support both real API and mock mode for CI/CD
 - Verify conversation persistence and traces
 
-**Example integration test:**
+**Test fixtures for mock mode:**
+```python
+# tests/integration/conftest.py
+import os
+import pytest
+import httpx
+import respx
+
+@pytest.fixture
+def use_real_api():
+    """Skip test if no real API key available."""
+    if not os.getenv("OPENROUTER_API_KEY"):
+        pytest.skip("OPENROUTER_API_KEY not set - skipping real API test")
+
+@pytest.fixture
+def mock_openrouter(respx_mock):
+    """Mock OpenRouter API for integration tests without real API key."""
+    respx_mock.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json={
+            "choices": [{"message": {"content": "Mocked response"}}],
+            "usage": {"total_tokens": 10}
+        })
+    )
+    return respx_mock
+```
+
+**Example integration test with mock support:**
 ```python
 # tests/integration/test_agent_workflow.py
+import os
 import pytest
 from detective_agent.agent import DetectiveAgent
 from detective_agent.providers.openrouter import OpenRouterProvider
 from detective_agent.config import AgentConfig, ProviderConfig
 
 @pytest.mark.asyncio
-async def test_full_conversation_workflow():
-    """Test complete conversation with persistence"""
+async def test_full_conversation_workflow_mocked(mock_openrouter):
+    """Test complete conversation with mocked API (runs in CI)"""
+    config = AgentConfig(
+        provider=ProviderConfig(api_key="test-key-for-mock")
+    )
+    async with OpenRouterProvider(config.provider) as provider:
+        agent = DetectiveAgent(provider, config)
+
+        # Send message (uses mock)
+        response = await agent.send_message("Hello!")
+        assert response == "Mocked response"
+
+        # Verify conversation saved
+        assert len(agent.conversation.messages) == 2  # user + assistant
+
+@pytest.mark.asyncio
+async def test_full_conversation_workflow_real(use_real_api):
+    """Test with real API (only runs when API key available)"""
     config = AgentConfig(
         provider=ProviderConfig(api_key=os.getenv("OPENROUTER_API_KEY"))
     )
-    provider = OpenRouterProvider(config.provider)
-    agent = DetectiveAgent(provider, config)
+    async with OpenRouterProvider(config.provider) as provider:
+        agent = DetectiveAgent(provider, config)
 
-    # Send message
-    response = await agent.send_message("Hello!")
-    assert len(response) > 0
+        # Send message
+        response = await agent.send_message("Hello!")
+        assert len(response) > 0
 
-    # Verify conversation saved
-    assert len(agent.conversation.messages) == 2  # user + assistant
+        # Verify conversation saved
+        assert len(agent.conversation.messages) == 2  # user + assistant
 
-    # Verify trace created
-    trace_id = agent.conversation.metadata.get("trace_id")
-    assert trace_id is not None
+        # Verify trace created
+        trace_id = agent.conversation.metadata.get("trace_id")
+        assert trace_id is not None
 ```
 
 ### Evaluation Tests
@@ -2021,6 +2560,7 @@ python -m evals.runner --compare-baseline v1.0.0
 ```
 module6/project/
 ├── src/detective_agent/          # Main source code
+│   ├── __init__.py
 │   ├── models.py                  # Data models
 │   ├── models_test.py             # Unit tests
 │   ├── config.py                  # Configuration
@@ -2031,11 +2571,13 @@ module6/project/
 │   ├── persistence_test.py        # Unit tests
 │   ├── cli.py                     # CLI interface
 │   ├── providers/                 # Provider implementations
+│   │   ├── __init__.py
 │   │   ├── base.py                # Protocol
 │   │   ├── openrouter.py          # OpenRouter provider
 │   │   ├── openrouter_test.py     # Unit tests
 │   │   └── errors.py              # Error types
 │   ├── tools/                     # Tool framework
+│   │   ├── __init__.py
 │   │   ├── base.py                # Tool abstractions
 │   │   ├── registry.py            # Tool registry
 │   │   ├── registry_test.py       # Unit tests
@@ -2043,17 +2585,23 @@ module6/project/
 │   │   ├── release_tools_test.py  # Unit tests
 │   │   └── errors.py              # Error types
 │   ├── context/                   # Context management
+│   │   ├── __init__.py
 │   │   ├── truncation.py          # Truncation strategy
 │   │   └── truncation_test.py     # Unit tests
 │   ├── retry/                     # Retry logic
+│   │   ├── __init__.py
 │   │   ├── backoff.py             # Exponential backoff
 │   │   └── backoff_test.py        # Unit tests
 │   └── observability/             # OpenTelemetry
+│       ├── __init__.py
 │       ├── tracing.py             # Tracing setup
 │       └── exporter.py            # Filesystem exporter
-├── tests/integration/             # Integration tests
-│   └── test_agent_workflow.py    # End-to-end tests
+├── tests/                         # Integration tests
+│   ├── __init__.py
+│   └── integration/
+│       └── test_agent_workflow.py # End-to-end tests
 ├── evals/                         # Evaluation system
+│   ├── __init__.py
 │   ├── models.py                  # Eval data models
 │   ├── runner.py                  # Eval runner
 │   ├── runner_test.py             # Unit tests
@@ -2063,11 +2611,72 @@ module6/project/
 │   └── reports/                   # Eval reports
 ├── data/                          # Runtime data
 │   ├── conversations/             # Saved conversations
+│   │   └── .gitkeep
 │   ├── traces/                    # OpenTelemetry traces
+│   │   └── .gitkeep
 │   └── risk_reports/              # Filed risk reports
+│       └── .gitkeep
+├── .env.example                   # Environment variable template
+├── .gitignore                     # Git ignore patterns
 ├── pyproject.toml                 # Project config
 └── README.md                      # Documentation
 ```
+
+---
+
+## Pythonic Improvements Summary
+
+This implementation incorporates modern Python best practices throughout:
+
+### 1. **Type Safety & Clarity**
+- **Type Aliases**: `MessageList`, `MessageRole`, `MetadataDict`, `ReleaseData` for complex types
+- **Comprehensive Type Hints**: All functions and methods fully typed
+- **Runtime Type Checking**: `@runtime_checkable` Protocol for provider interface
+
+### 2. **Resource Management**
+- **Async Context Managers**: `OpenRouterProvider` implements `__aenter__`/`__aexit__`
+- **Automatic Cleanup**: Resources cleaned up even on exceptions
+- **Property Guards**: Client property ensures initialization before use
+
+### 3. **Configuration Management**
+- **pydantic-settings**: Automatic environment variable loading
+- **Type Validation**: Pydantic validates all config values
+- **Defaults & Constraints**: Field validators ensure valid ranges (temperature 0-2, etc.)
+
+### 4. **Error Handling**
+- **Exception Chaining**: All `raise` statements use `from e` to preserve stack traces
+- **Specific Exceptions**: Custom exception hierarchy for different error types
+- **Structured Logging**: Logging with context instead of print statements
+
+### 5. **Modern Python Features (3.10+)**
+- **Pattern Matching**: CLI uses `match/case` for command handling
+- **Union Types**: `X | None` instead of `Optional[X]`
+- **Structural Pattern Matching**: Clean command dispatch
+
+### 6. **Performance Optimizations**
+- **__slots__**: Pydantic models use slots for reduced memory usage
+- **Lazy Initialization**: HTTP client created only when needed
+- **Efficient Path Operations**: pathlib.Path for cross-platform compatibility
+
+### 7. **Datetime Handling**
+- **Timezone-Aware**: `datetime.now(timezone.utc)` instead of deprecated `utcnow()`
+- **ISO Format**: `.isoformat()` for JSON serialization
+- **Consistent UTC**: All timestamps in UTC
+
+### 8. **Type-Safe Constants**
+- **Enums**: `RiskSeverity(str, Enum)` for severity levels
+- **Literal Types**: `MessageRole` for message roles
+- **Validation**: Enum validation with helpful error messages
+
+### 9. **Documentation**
+- **Google-Style Docstrings**: Args, Returns, Raises sections
+- **Type Information**: Docstrings complement type hints
+- **Examples**: Where helpful for complex APIs
+
+### 10. **Testing Improvements**
+- **Async Tests**: pytest-asyncio for async test support
+- **Context Manager Tests**: Verify proper resource cleanup
+- **Exception Chain Tests**: Verify `from e` preserves context
 
 ---
 
@@ -2090,20 +2699,35 @@ After completing all 7 steps, consider:
 
 The implementation is complete when:
 
-- ✅ All 7 steps implemented with passing tests
+### Functional Requirements
+- ✅ Steps 1, 2, 4, 5, 6, 7 implemented with passing tests
 - ✅ Agent can assess release risks using tools
 - ✅ Full observability with OpenTelemetry traces
-- ✅ Context window management (truncation) prevents token errors
-- ✅ Last 6 messages retained (3 user + 3 assistant)
+- ⏸️ Context window management (truncation) prevents token errors [DEFERRED]
+- ⏸️ Last 6 messages retained (3 user + 3 assistant) [DEFERRED]
 - ✅ Retry mechanism handles transient failures
 - ✅ Evaluation system validates behavior
-- ✅ Documentation is complete and clear
-- ✅ Code is clean, readable, and well-tested
 - ✅ OpenRouter provider fully functional
 - ✅ CLI provides good user experience
+
+### Code Quality & Pythonic Standards
+- ✅ Type hints on all functions and methods
+- ✅ Async context managers for resource management
+- ✅ pydantic-settings for configuration
+- ✅ Exception chaining with `from e`
+- ✅ Pattern matching for control flow
+- ✅ Logging instead of print statements
+- ✅ Enums for type-safe constants
+- ✅ pathlib.Path for file operations
+- ✅ timezone-aware datetime handling
+- ✅ Google-style docstrings
+
+### Testing & Documentation
 - ✅ All unit tests pass (>80% coverage)
 - ✅ Integration tests verify end-to-end workflows
 - ✅ Evaluation suite demonstrates agent capabilities
+- ✅ Documentation is complete and clear
+- ✅ Code is clean, readable, and well-tested
 
 ---
 
@@ -2116,11 +2740,12 @@ The implementation is complete when:
    - Compatible with OpenAI API format
    - Good for experimentation and cost optimization
 
-2. **Context Window Strategy**: Truncation with 6 messages
+2. **Context Window Strategy**: Truncation with 6 messages [DEFERRED]
    - Simple and predictable
    - Keeps most recent context
    - Prevents token limit errors
    - Easy to understand and debug
+   - *Implementation deferred to future iteration*
 
 3. **Tool Calling Format**: Anthropic-style tool definitions
    - Well-documented format
