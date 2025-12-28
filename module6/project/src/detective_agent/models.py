@@ -28,6 +28,7 @@ class Conversation(BaseModel):
     model_config = ConfigDict(frozen=False, slots=True)
 
     id: str = Field(default_factory=lambda: str(uuid4()))
+    trace_id: str | None = None  # Links to observability trace
     system_prompt: str
     messages: list[Message] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -51,32 +51,32 @@ This section outlines an incremental, iterative approach to building the agent. 
 - [x] At least 3 automated tests covering core functionality
 - [x] Provider abstraction interface is defined and is implemented
 
-### Step 2: Observability (Traces and Spans) ⏳
+### Step 2: Observability (Traces and Spans) ✅
 **Goal:** Add complete OpenTelemetry visibility into agent operations
 
 **Components:**
-- [ ] OpenTelemetry data structures
-- [ ] Instrumentation for agent operations
-- [ ] Instrumentation for provider calls
-- [ ] Filesystem-based trace export (JSON files)
-- [ ] Trace context propagation through conversation
+- [x] OpenTelemetry data structures - `observability/models.py` (Trace, Span, SpanStatus, SpanKind)
+- [x] Instrumentation for agent operations - `agent.py` (send_message, tool execution spans)
+- [x] Instrumentation for provider calls - `agent.py` (llm_call span with token counts)
+- [x] Filesystem-based trace export (JSON files) - `observability/exporter.py`
+- [x] Trace context propagation through conversation - `observability/tracer.py` (context vars)
 
 **Capabilities:**
-- [ ] Every conversation generates a trace
-- [ ] Agent operations captured as spans (send_message, provider calls)
-- [ ] Traces include timing, token counts, model info
-- [ ] All traces saved to filesystem as JSON
-- [ ] Trace IDs link conversations to their traces
+- [x] Every conversation generates a trace
+- [x] Agent operations captured as spans (send_message, provider calls)
+- [x] Traces include timing, token counts, model info
+- [x] All traces saved to filesystem as JSON
+- [x] Trace IDs link conversations to their traces
 
 **Acceptance Criteria:**
-- [ ] Each conversation has a unique trace ID
-- [ ] Traces saved to filesystem in structured JSON format
-- [ ] Spans capture: operation name, duration, start/end times
-- [ ] Provider call spans include: model, tokens (input/output), duration
-- [ ] Conversation spans include: message count, total tokens
-- [ ] Trace files are human-readable and well-organized
-- [ ] Can correlate conversation JSON with its trace JSON via trace ID
-- [ ] Automated tests verify trace generation
+- [x] Each conversation has a unique trace ID - `models.py` Conversation.trace_id
+- [x] Traces saved to filesystem in structured JSON format - `data/traces/YYYY-MM-DD/`
+- [x] Spans capture: operation name, duration, start/end times
+- [x] Provider call spans include: model, tokens (input/output), duration
+- [x] Conversation spans include: message count, total tokens
+- [x] Trace files are human-readable and well-organized
+- [x] Can correlate conversation JSON with its trace JSON via trace ID
+- [x] Automated tests verify trace generation - `observability/observability_test.py`
 
 ### Step 3: Context Window Management ⏳
 **Goal:** Handle conversations that exceed model token limits

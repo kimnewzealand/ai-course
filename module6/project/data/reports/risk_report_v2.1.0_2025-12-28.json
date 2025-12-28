@@ -1,10 +1,10 @@
 {
   "release_id": "v2.1.0",
-  "severity": "low",
+  "severity": "medium",
   "findings": [
-    "Payment processing introduces some risk",
-    "Authentication bug fix improves security",
-    "High test pass rate indicates thorough testing"
+    "Error rate is relatively low",
+    "Response time is within acceptable range",
+    "Failed tests may indicate potential issues"
   ],
-  "filed_at": "2025-12-28T22:45:20.038621+00:00"
+  "filed_at": "2025-12-28T23:06:27.732244+00:00"
 }
