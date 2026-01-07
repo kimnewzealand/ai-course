@@ -271,3 +271,5 @@ Based on implementing the Detective Agent, these specific additions would improv
 | Medium | Create testing strategies | `.augment/rules/testing.md` | Medium |
 | Medium | Create observability patterns | `.augment/rules/observability.md` | Medium |
 | Low | Create agent patterns guide | `.augment/rules/agent-patterns.md` | High |
+
+
