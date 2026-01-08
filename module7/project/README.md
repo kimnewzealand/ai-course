@@ -139,10 +139,10 @@ uv run mypy src/
 - ✅ Step 1.1: Project Initialization
 - ✅ Step 1.2: Configuration Management
 - ✅ Step 1.3: Basic Agent Setup with LangChain
+- ✅ Step 1.4: Observability (OpenTelemetry)
 
 **Next Steps:**
 
-- ⏳ Step 1.4: Observability (OpenTelemetry)
 - ⏳ Step 1.5: Conversation Persistence
 
 Refer to `PLAN_before.md`, `DESIGN.md`, and `EXERCISE.md` for full details and acceptance criteria.
