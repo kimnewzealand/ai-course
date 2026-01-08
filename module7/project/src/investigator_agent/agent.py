@@ -6,13 +6,15 @@ minimal conversational interface for Phase 1 (no tools yet).
 
 from typing import Any
 
-from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain.agents import AgentExecutor
 from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 
 from investigator_agent.config import AgentConfig
+from investigator_agent.observability.callbacks import TracingCallbackHandler
+from investigator_agent.observability.tracer import setup_tracing
 
 
 class InvestigatorAgent:
@@ -52,6 +54,14 @@ class InvestigatorAgent:
 
         # Agent executor (will be initialized when tools are added)
         self.agent_executor: AgentExecutor | None = None
+
+        # Tracing callbacks (Step 1.4)
+        if config.enable_tracing:
+            self.tracer = setup_tracing(config.traces_dir)
+            self.callbacks = [TracingCallbackHandler(self.tracer)]
+        else:
+            self.tracer = None
+            self.callbacks: list[Any] = []
 
     def _create_prompt(self) -> ChatPromptTemplate:
         """Create the agent prompt template."""
@@ -97,8 +107,9 @@ In later phases, you will have tools to retrieve actual feature data."""
                 HumanMessage(content=user_message),
             ]
 
-            # Invoke model asynchronously
-            response = await self.llm.ainvoke(messages)
+            # Invoke model asynchronously (with tracing callbacks when enabled)
+            config = {"callbacks": self.callbacks} if self.callbacks else None
+            response = await self.llm.ainvoke(messages, config=config)
 
             # Persist to memory
             self.memory.chat_memory.add_user_message(user_message)
