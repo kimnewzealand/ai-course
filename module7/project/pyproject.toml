@@ -31,7 +31,11 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["src", "tests"]
+python_files = ["*_test.py", "test_*.py"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/investigator_agent"]
 
 [tool.black]
 line-length = 100
