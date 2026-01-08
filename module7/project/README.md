@@ -138,9 +138,10 @@ uv run mypy src/
 **Completed Steps:**
 - ✅ Step 1.1: Project Initialization
 - ✅ Step 1.2: Configuration Management
+- ✅ Step 1.3: Basic Agent Setup with LangChain
 
 **Next Steps:**
-- ⏳ Step 1.3: Basic Agent Setup with LangChain
+
 - ⏳ Step 1.4: Observability (OpenTelemetry)
 - ⏳ Step 1.5: Conversation Persistence
 
