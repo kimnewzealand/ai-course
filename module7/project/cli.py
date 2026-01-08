@@ -50,7 +50,7 @@ async def main() -> None:
             response = await agent.send_message(user_input)
             print(f"\nAgent: {response}\n")
 
-        except KeyboardInterrupt:  # pragma: no cover - interactive only
+        except (KeyboardInterrupt, EOFError):  # pragma: no cover - interactive only
             print("\n\nGoodbye!")
             break
         except Exception as exc:  # pragma: no cover - defensive guardrail
