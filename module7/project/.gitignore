@@ -1,0 +1,22 @@
+# Python virtual environments and env files
+.venv/
+.env
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+
+# Editor and tooling
+.vscode/
+.idea/
+
+# Data and traces
+/data/conversations/
+/data/traces/
+/data/evaluations/
+
+# uv metadata
+.uv/
+

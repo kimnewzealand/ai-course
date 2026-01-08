@@ -353,6 +353,11 @@ line-length = 100
 target-version = "py313"
 ```
 
+**Note (branch `feature/1-1-project-init`)**  
+During implementation, `langchain-core` was updated from `0.3.28` to `0.3.29` in
+`pyproject.toml` to satisfy the resolver constraints for `langchain==0.3.14`
+when running `uv sync`.
+
 ### Step 1.2: Configuration Management
 
 **Tasks:**

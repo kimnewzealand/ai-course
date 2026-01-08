@@ -1,0 +1,43 @@
+[project]
+name = "investigator-agent"
+version = "0.1.0"
+description = "Feature readiness assessment agent using LangChain"
+requires-python = "==3.13.5"
+
+dependencies = [
+    "langchain==0.3.14",
+    "langchain-openai==0.2.14",
+    "langchain-community==0.3.14",
+    "langchain-core==0.3.29",
+    "opentelemetry-api==1.29.0",
+    "opentelemetry-sdk==1.29.0",
+    "pydantic==2.10.5",
+    "pydantic-settings==2.7.1",
+    "python-dotenv==1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "black==24.10.0",
+    "ruff==0.8.4",
+    "mypy==1.14.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
