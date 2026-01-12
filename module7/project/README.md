@@ -108,7 +108,7 @@ Once implemented, you'll be able to run:
 
 ```bash
 # Run the agent interactively
-uv run python -m cli.py
+uv run python -m cli
 
 # Or if a CLI script is configured
 investigator-agent
